@@ -1,22 +1,14 @@
 ---
-- name: Install and Configure Zerotier
+- name: Install Zerotier
   hosts: all
-  become: yes
-  
+  become: true
   tasks:
-    - name: Install curl, sudo, and openssh-server
-      apt:
-        name:
-          - curl
-          - sudo
-          - openssh-server
-        state: present
-        
-    - name: Download Zerotier
-      command: curl -s https://install.zerotier.com | sudo bash
+  - name: Download Zerotier installation script
+    get_url:
+      url: https://install.zerotier.com
+      dest: /tmp/zerotier_install.sh
+  - name: Install Zerotier
+    shell: bash /tmp/zerotier_install.sh
+    args:
+      creates: /usr/sbin/zerotier-one
 
-    - name: Join Zerotier network
-      command: zerotier-cli join 8bd5124fd642e41c
-      
-    - name: Change allowManaged setting
-      command: zerotier-cli set 8bd5124fd642e41c allowManaged=0

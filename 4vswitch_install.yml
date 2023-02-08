@@ -1,0 +1,34 @@
+---
+- name: Install and configure Open vSwitch
+  hosts: all
+  become: yes
+
+  tasks:
+    - name: Install Open vSwitch and dependencies
+      apt:
+        name:
+          - openvswitch-switch
+          - net-tools
+        state: present
+
+    - name: Enable Open vSwitch service
+      systemd:
+        name: ovsdb-server
+        state: started
+        enabled: yes
+
+    - name: Start Open vSwitch service
+      service:
+        name: openvswitch-switch
+        state: started
+
+    - name: Show Open vSwitch information
+      shell: ovs-vsctl show
+      register: ovs_show
+      changed_when: false
+      ignore_errors: true
+
+    - name: Display Open vSwitch information
+      debug:
+        var: ovs_show.stdout_lines
+

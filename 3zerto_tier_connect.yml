@@ -1,0 +1,11 @@
+---
+# This playbook joinz zerotier and sets the allowmanaged to zero
+
+- hosts: all
+  #remote_user: root
+
+  tasks:
+  - name: connect zerotier to network
+    command: zerotier-cli join {{ network_id_var }}
+  - name: Set allow managed to zero
+    command: zerotier-cli set {{ network_id_var }} allowManaged=0
