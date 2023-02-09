@@ -1,0 +1,34 @@
+---
+- name: Transfer and execute a script.
+  hosts: all
+  remote_user: root
+  tasks:
+     - name: Transfer the script
+       copy: src=find_network_interfaces_same_pci.sh dest=/tmp mode=0777
+
+     - name: Run similar names script
+       command: "/tmp/find_network_interfaces_same_pci.sh"
+       register: network_list
+
+     - name: Convert script output to usable format
+       set_fact:
+         network_devices: "{{ network_list.stdout_lines[0] | join(' and ') }}"
+
+     - name: Print usable network interfaces
+       debug:
+         var: network_devices
+
+     - name: Remove the shell script
+       file:
+         path: /tmp/find_network_interfaces_same_pci.sh
+         state: absent
+
+     - name: Create the bridge
+       shell: ovs-vsctl add-br br0
+
+     - name: Loop through the network devices and add each to the br0 bridge
+       shell: |
+         for device in {{ network_devices.stdout }}
+         do
+           ovs-vsctl add-port br0 $device
+         done
