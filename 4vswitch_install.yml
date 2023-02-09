@@ -32,3 +32,37 @@
       debug:
         var: ovs_show.stdout_lines
 
+    - name: Get the list of network interfaces on the same PCI
+      command: bash -c "lspci | grep Ethernet | awk '{print $1}' | xargs -I {} lspci -v -s {} | grep 'Kernel driver in use' | awk '{print $5}' | xargs -I {} ip link show {} | grep UP | awk '{print $2}' | sed 's/://'"
+      register: interfaces
+
+    - name: Create the OVS bridge
+      become: true
+      shell: |
+        for interface in {{ interfaces.stdout_lines }}; do
+          ovs-vsctl add-port br0 $interface
+        done
+      when: interfaces.stdout_lines is defined
+
+    - name: Check if Zerotier is installed
+      command: dpkg -s zerotier-one
+      register: zt_installed
+      changed_when: false
+
+    - name: Install Zerotier
+      become: true
+      apt:
+        name: zerotier-one
+        state: present
+      when: zt_installed.rc != 0
+
+    - name: Get the name of the Zerotier network interface
+      command: ip link show | grep -o "zt_.*@"
+      #command: bash -c "ip link show | grep '^[0-9]' | awk '$2 ~ /^zt/ {print $2}'"
+      register: zt_interface
+      when: zt_installed.rc == 0
+
+    - name: Add the Zerotier network interface to the bridge
+      become: true
+      shell: ovs-vsctl add-port br0 {{ zt_interface.stdout }}
+      when: zt_interface.stdout is defined

@@ -1,0 +1,20 @@
+- name: Rename Ethernet Interfaces
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Get the current network interfaces
+      command: "ls /sys/class/net"
+      register: interfaces
+
+    - name: Rename the Ethernet Interfaces
+      become: true
+      shell: |
+        count=1
+        for interface in {{ interfaces.stdout_lines }}; do
+          if [[ $interface != "lo" ]]; then
+            ip link set dev $interface down
+            ip link set dev $interface name eth$count
+            ip link set dev eth$count up
+            ((count++))
+          fi
+        done
