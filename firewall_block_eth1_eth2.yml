@@ -1,0 +1,62 @@
+- name: Block communication between interfaces
+  hosts: all
+  become: yes
+  tasks:
+    - name: Flush existing firewall rules
+      iptables:
+        chain: INPUT
+        table: filter
+        command: flush
+
+    - name: Set default policy to drop
+      iptables:
+        chain: INPUT
+        table: filter
+        policy: DROP
+
+    - name: Allow established connections
+      iptables:
+        chain: INPUT
+        table: filter
+        jump: ACCEPT
+        state: established
+
+    - name: Allow loopback traffic
+      iptables:
+        chain: INPUT
+        table: filter
+        jump: ACCEPT
+        in_interface: lo
+
+    - name: Block communication between eth0, eth1 and eth2
+      iptables:
+        chain: INPUT
+        table: filter
+        jump: DROP
+        in_interface: eth0
+        out_interface: eth1
+
+    - name: Block communication between eth0, eth1 and eth2
+      iptables:
+        chain: INPUT
+        table: filter
+        jump: DROP
+        in_interface: eth0
+        out_interface: eth2
+
+    - name: Block communication between eth0, eth1 and eth2
+      iptables:
+        chain: INPUT
+        table: filter
+        jump: DROP
+        in_interface: eth1
+        out_interface: eth0
+
+    - name: Block communication between eth0, eth1 and eth2
+      iptables:
+        chain: INPUT
+        table: filter
+        jump: DROP
+        in_interface: eth2
+        out_interface: eth0
+
