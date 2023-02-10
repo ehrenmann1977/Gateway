@@ -1,0 +1,22 @@
+---
+- name: Detect network device from network id
+  hosts: all
+  gather_facts: no
+  vars:
+    zt_network_id: "{{ network_id_var }}"
+  tasks:
+    - name: Detect zerotier network device name using given network id
+      shell: "zerotier-cli listnetworks | awk '{if ($3 == \"{{ zt_network_id }}\" ) print $8}'"
+      register: zt_device_name
+
+    - name: Debug network device name
+      debug:
+        msg: "Detected Zerotier device name {{ zt_device_name.stdout }}"
+
+    - name: Add Zerotier device to bridge br0
+      command: "ovs-vsctl add-port br0 {{ zt_device_name.stdout.strip() }}"
+      when: zt_device_name.stdout != ""
+
+    - name: Assign IP to bridge br0
+      command: "ifconfig br0 10.147.20.2/24 up"
+

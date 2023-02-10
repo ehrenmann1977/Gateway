@@ -29,7 +29,6 @@
      - name: Create OVS bridge and add interfaces
        command: "ovs-vsctl add-br br0" 
        
-
      - name: Add interfaces to bridge
        command: "ovs-vsctl add-port br0 {{ item }}"
        with_items: "{{ network_interface_list.stdout_lines }}"
