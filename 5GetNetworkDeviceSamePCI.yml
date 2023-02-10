@@ -8,27 +8,28 @@
 
      - name: Run similar names script
        command: "/tmp/find_network_interfaces_same_pci.sh"
-       register: network_list
+       register: network_interface_list
 
-     - name: Convert script output to usable format
+     - name: Process network interfaces
        set_fact:
-         network_devices: "{{ network_list.stdout_lines[0] | join(' and ') }}"
+         network_interfaces: "{{ network_interface_list.stdout_lines }}"
 
-     - name: Print usable network interfaces
+     - name: Loop over network interfaces
        debug:
-         var: network_devices
+         msg: "Processing network interface: {{ item }}"
+       loop: "{{ network_interfaces }}"
+       loop_control:
+         loop_var: item
 
      - name: Remove the shell script
        file:
          path: /tmp/find_network_interfaces_same_pci.sh
          state: absent
 
-     - name: Create the bridge
-       shell: ovs-vsctl add-br br0
+     - name: Create OVS bridge and add interfaces
+       shell: ovs-vsctl add-br br0 && ovs-vsctl add-port br0 {{ item }}
+       with_items: "{{ network_interfaces }}"
 
-     - name: Loop through the network devices and add each to the br0 bridge
-       shell: |
-         for device in {{ network_devices.stdout }}
-         do
-           ovs-vsctl add-port br0 $device
-         done
+     - name: Add interfaces to bridge
+       command: "ovs-vsctl add-port br0 {{ item }}"
+       with_items: "{{ network_interface_list.stdout_lines }}"
