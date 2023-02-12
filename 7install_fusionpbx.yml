@@ -1,0 +1,37 @@
+---
+- name: Install FusionPBX
+  hosts: all
+  become: true
+  tasks:
+    - name: Download pre-install script
+      get_url:
+        url: https://raw.githubusercontent.com/fusionpbx/fusionpbx-install.sh/master/debian/pre-install.sh
+        dest: /tmp/pre-install.sh
+      register: result
+
+    - name: Run pre-install script
+      command: sh /tmp/pre-install.sh
+      when: result.changed
+
+    - name: Edit config.sh file
+      lineinfile:
+        dest: /usr/src/fusionpbx-install.sh/debian/resources/config.sh
+        line: "{{ item.line }}"
+        state: present
+      with_items:
+        - { line: 'domain_name={{ domain_name | default("127.0.0.1") }}' }
+        - { line: 'system_username={{ system_username | default("admin") }}' }
+        - { line: 'system_password={{ system_password | default(lookup("password", password_length=32, chars="ascii_letters+digits")) }}' }
+        - { line: 'database_name={{ database_name | default("fusionpbx") }}' }
+        - { line: 'database_username={{ database_username | default("fusionpbx") }}' }
+        - { line: 'database_password={{ database_password | default(lookup("password", password_length=32, chars="ascii_letters+digits")) }}' }
+        - { line: 'database_repo={{ database_repo | default("system") }}' }
+        - { line: 'database_host={{ database_host | default("127.0.0.1") }}' }
+        - { line: 'database_port={{ database_port | default("5432") }}' }
+        - { line: 'letsencrypt_folder={{ letsencrypt_folder | default("true") }}' }
+
+    - name: Run FusionPBX installer
+      command: ./install.sh
+      args:
+        chdir: /usr/src/fusionpbx-install.sh/debian
+
