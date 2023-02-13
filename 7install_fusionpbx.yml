@@ -30,12 +30,15 @@
         - { line: 'database_port={{ database_port | default("5432") }}' }
         - { line: 'letsencrypt_folder={{ letsencrypt_folder | default("true") }}' }
 
-    - name: Monitor Fusion PBX result
-      debug:
-        msg: "To monitor the FusionPBX Installation, from another shell screen -ls then screen -r <session id>"
-
-    - name: Install Fusion PBX using mkfifo
+    - name: Install Fusion PBX using screen
       command: sh -c "screen -d -m ./install.sh"
       args:
         chdir: /usr/src/fusionpbx-install.sh/debian
+      register: fusion_pbx_install
+
+    - name: Print instructions for connecting to screen from another shell
+      when: fusion_pbx_install is succeeded
+      shell: |
+        echo "Fusion PBX is installing now, to connect to the screen session from another shell, run the following command:"
+        echo "screen_session_id=$(screen -ls | awk -F"." '/[0-9]*\s*\(Detached\)/ {print $1}' | tail -1) && screen -r screen_session_id"
 
