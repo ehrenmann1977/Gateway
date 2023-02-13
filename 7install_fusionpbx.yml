@@ -30,25 +30,37 @@
         - { line: 'database_port={{ database_port | default("5432") }}' }
         - { line: 'letsencrypt_folder={{ letsencrypt_folder | default("true") }}' }
 
-    - name: Print instructions for connecting to screen from another shell
+    - name: Create a new screen session
+      command: screen -d -m
+      register: screen_session
+
+    - name: Get screen session ID
+      shell: screen -ls | awk -F"." '/[0-9]*\s*\(Detached\)/ {print $1}' | tail -1
+      register: screen_session_id
+      when: screen_session is changed
+
+    - name: Print screen session ID
       debug:
-        msg: |
-          Fusion PBX is installing now, to connect to the screen session from another shell, run the following command:
-          screen -r screen_session_id=$(screen -ls | awk -F"." '/[0-9]*\s*\(Detached\)/ {print $1}' | tail -1)
-          To detach from a screen, press ctrl+A followed by d
+       var: screen_session_id.stdout_lines
+      when: screen_session is changed
 
-
-
-    - name: Print instructions for connecting to screen from another shel
+    - name: Enable logging for a screen session
       command: |
-        echo "Fusion PBX is installing now, to connect to the screen session from another shell, run the following command:"
-        echo "screen -r $(screen -ls | awk -F"." '/[0-9]*\s*\(Detached\)/ {print $1}' | tail -1)"
-        echo "To detach from a screen, press ctrl+A followed by d"
+        screen -r {{ screen_session_id }} -X log on
+        screen -r {{ screen_session_id }} -X logfile /tmp/install_fusionpbx.txt
+      args:
+        creates: /tmp/install_fusionpbx.txt
 
     - name: Install Fusion PBX using screen
-      command: sh -c "screen -d -m ./install.sh"
+      command: sh -c "screen -S screen_session -d -m ./install.sh"
       args:
         chdir: /usr/src/fusionpbx-install.sh/debian
       register: fusion_pbx_install
-      delay: 180
-      timeout: 10800
+
+    - name: Debug screen session
+      debug:
+        msg: "Screen session with ID {{ screen_session_id }} is being logged on and output is being redirected to {{ logfile_path }}"
+        msg: "to trace the progress, connect from another shell, and type tail -d /tmp/install_fusionpbx.txt  
+      vars:
+        screen_session_id: "{{ screen_session_id }}"
+        logfile_path: "/tmp/install_fusionpbx.txt"
