@@ -35,6 +35,7 @@
       shell: |
         echo "Fusion PBX is installing now, to connect to the screen session from another shell, run the following command:"
         echo "screen_session_id=$(screen -ls | awk -F"." '/[0-9]*\s*\(Detached\)/ {print $1}' | tail -1) && screen -r $screen_session_id"
+        echo "to detach from a screen, press ctrl+A follwed by d"
 
     - name: Install Fusion PBX using screen
       command: sh -c "screen -d -m ./install.sh"
