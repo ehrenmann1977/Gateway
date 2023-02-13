@@ -32,10 +32,10 @@
 
     - name: Monitor Fusion PBX result
       debug:
-        msg: "To monitor the FusionPBX Installation connect to pipe my_fifo from another session"
+        msg: "To monitor the FusionPBX Installation, from another shell screen -ls then screen -r <session id>"
 
     - name: Install Fusion PBX using mkfifo
-      command: sh -c "mkfifo my_fifo && ./install.sh &> my_fifo & tail -f my_fifo"
+      command: sh -c "screen -d -m ./install.sh"
       args:
         chdir: /usr/src/fusionpbx-install.sh/debian
 
