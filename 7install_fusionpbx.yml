@@ -30,6 +30,15 @@
         - { line: 'database_port={{ database_port | default("5432") }}' }
         - { line: 'letsencrypt_folder={{ letsencrypt_folder | default("true") }}' }
 
+    - name: Print instructions for connecting to screen from another shell
+      debug:
+        msg: |
+          Fusion PBX is installing now, to connect to the screen session from another shell, run the following command:
+          screen -r screen_session_id=$(screen -ls | awk -F"." '/[0-9]*\s*\(Detached\)/ {print $1}' | tail -1)
+          To detach from a screen, press ctrl+A followed by d
+
+
+
     - name: Print instructions for connecting to screen from another shel
       command: |
         echo "Fusion PBX is installing now, to connect to the screen session from another shell, run the following command:"
