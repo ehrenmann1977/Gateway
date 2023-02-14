@@ -1,9 +1,0 @@
----
-- name: Install nano text editor
-  hosts: all
-  become: yes
-  tasks:
-  - name: Ensure nano package is installed
-    apt:
-      name: nano
-      state: present
