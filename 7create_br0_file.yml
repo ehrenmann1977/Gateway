@@ -1,0 +1,97 @@
+#!/usr/bin/env ansible-playbook
+#
+# Author: Sherif Omran
+# Copyright: 2022, Sherif Omran
+#
+# This Ansible playbook sets up a bridge interface (br0) on all hosts, using the IP address and netmask specified as variables.
+# The script also adds Zerotier Tap port and ethernet ports to the bridge using the output of a custom shell script (find_network_interfaces_same_pci.sh).
+#
+# Usage: ansible-playbook create_ethernet_file_for_bridge_0.yml -e "network_id_var=<Zerotier network ID> bridge_ip=<IP address for bridge> bridge_netmask=<Netmask for bridge>"
+#
+# ansible-playbook -i inventory.ini, --extra-vars "network_id_var=[zerotier_network_id] bridge_ip=10.147.20.2 bridge_netmask=255.255.255.0
+
+---
+- name: Create Ethernet file for bridge 0
+  hosts: all
+  become: yes
+  gather_facts: no
+
+  vars:
+    bridge_ip: "{{ bridge_ip_var }}"
+    bridge_netmask: "{{ bridge_netmask_var }}"
+    zt_network_id: "{{ network_id_var }}"
+
+  tasks:
+  - name: Transfer the script
+    copy: src=find_network_interfaces_same_pci.sh dest=/tmp mode=0777
+
+  - name: Run similar names script
+    command: "/tmp/find_network_interfaces_same_pci.sh"
+    register: network_interface_list
+
+  - name: Process network interfaces
+    set_fact:
+      ethernet_ports: "{{ network_interface_list.stdout_lines }}"
+
+  - name: Create Ethernet file for bridge 0
+    lineinfile:
+      dest: /etc/network/interfaces.d/br0
+      line: "auto br0"
+      state: present
+
+  - name: Configure IP address for bridge 0
+    lineinfile:
+      dest: /etc/network/interfaces.d/br0
+      line: "iface br0 inet static"
+      state: present
+
+  - name: Set bridge IP address
+    lineinfile:
+      dest: /etc/network/interfaces.d/br0
+      line: "  address {{ bridge_ip }}"
+      state: present
+
+  - name: Set bridge netmask
+    lineinfile:
+      dest: /etc/network/interfaces.d/br0
+      line: "  netmask {{ bridge_netmask }}"
+      state: present
+    notify:
+      - restart network
+
+  - name: Detect Zerotier network device name using given network id
+    shell: "zerotier-cli listnetworks | awk '{if ($3 == \"{{ zt_network_id }}\" ) print $8}'"
+    register: zt_device_name
+
+  - name: Debug Zerotier device name
+    debug:
+      msg: "Detected Zerotier device name {{ zt_device_name.stdout_lines }}"
+
+  - name: Add Zerotier Tap port to bridge
+    lineinfile:
+      dest: /etc/network/interfaces.d/br0
+      line: "  bridge_ports {{ item }}"
+      state: present
+    with_items: "{{ zt_device_name.stdout_lines }}"
+    notify:
+      - restart network
+
+  - name: Add Ethernet ports to bridge
+    lineinfile:
+      dest: /etc/network/interfaces.d/br0
+      line: "  bridge_ports {{ item }}"
+      state: present
+    with_items: "{{ ethernet_ports }}"
+    notify:
+      - restart network
+	  
+  - name: Remove the transferred script
+    file:
+      path: /tmp/find_network_interfaces_same_pci.sh
+      state: absent
+	  
+  handlers:
+    - name: restart network
+      service:
+        name: networking
+        state: restarted
