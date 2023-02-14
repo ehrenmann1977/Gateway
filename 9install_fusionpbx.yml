@@ -30,6 +30,12 @@
         - { line: 'database_port={{ database_port | default("5432") }}' }
         - { line: 'letsencrypt_folder={{ letsencrypt_folder | default("true") }}' }
 
+    - name: Install Screen
+      become: yes
+      package:
+        name: screen
+        state: present
+
     - name: Create a new screen session
       command: screen -d -m
       register: screen_session
