@@ -1,62 +1,77 @@
-- name: Block communication between interfaces
+---
+- name: Firewall Adjustment Script
   hosts: all
-  become: yes
+  remote_user: root
+  vars:
   tasks:
-    - name: Flush existing firewall rules
-      iptables:
-        chain: INPUT
-        table: filter
-        command: flush
+    - name: Transfer find network script
+      copy:
+        src: find_network_interfaces_same_pci.sh
+        dest: /tmp
+        mode: 0777
 
-    - name: Set default policy to drop
-      iptables:
-        chain: INPUT
-        table: filter
-        policy: DROP
+    - name: Transfer the firewall connection script
+      copy:
+        src: connect_ethernet_interfaces_to_zones.sh
+        dest: /tmp
+        mode: 0777
 
-    - name: Allow established connections
-      iptables:
-        chain: INPUT
-        table: filter
-        jump: ACCEPT
-        state: established
+    - name: Install firewalld
+      become: yes
+      package:
+        name: firewalld
+        state: present
 
-    - name: Allow loopback traffic
-      iptables:
-        chain: INPUT
-        table: filter
-        jump: ACCEPT
-        in_interface: lo
+    - name: Start firewalld service
+      become: yes
+      service:
+        name: firewalld
+        state: started
 
-    - name: Block communication between eth0, eth1 and eth2
-      iptables:
-        chain: INPUT
-        table: filter
-        jump: DROP
-        in_interface: eth0
-        out_interface: eth1
+    - name: Set default zone as public
+      become: yes
+      command: firewall-cmd --set-default-zone=public
 
-    - name: Block communication between eth0, eth1 and eth2
-      iptables:
-        chain: INPUT
-        table: filter
-        jump: DROP
-        in_interface: eth0
-        out_interface: eth2
+    - name: Enable masquerade in the public zone
+      become: yes
+      command: firewall-cmd --zone=public --add-masquerade
 
-    - name: Block communication between eth0, eth1 and eth2
-      iptables:
-        chain: INPUT
-        table: filter
-        jump: DROP
-        in_interface: eth1
-        out_interface: eth0
+    - name: Create the trusted zone
+      become: yes
+      command: firewall-cmd --permanent --new-zone=trusted
 
-    - name: Block communication between eth0, eth1 and eth2
-      iptables:
-        chain: INPUT
-        table: filter
-        jump: DROP
-        in_interface: eth2
-        out_interface: eth0
+    - name: Create the internal_with_internet zone
+      become: yes
+      command: firewall-cmd --permanent --new-zone=internal_with_internet
+
+    - name: Create the internal_no_internet zone
+      become: yes
+      command: firewall-cmd --permanent --new-zone=internal_no_internet
+
+    - name: Run Firewall and zones script
+      command: "/tmp/connect_ethernet_interfaces_to_zones.sh {{ zerotier_ip_range }}"
+      register: network_interface_list
+
+    - name: Allow full duplex communication between the internal_with_internet and zerotier zones
+      become: yes
+      command: firewall-cmd --permanent --zone=internal_with_internet --add-source=zerotier
+      command: firewall-cmd --permanent --zone=zerotier --add-source=internal_with_internet
+
+    - name: Allow full duplex communication between the internal_no_internet and internal_with_internet zones
+      become: yes
+      command: firewall-cmd --permanent --zone=internal_no_internet --add-source=internal_with_internet
+      command: firewall-cmd --permanent --zone=internal_with_internet --add-source=internal_no_internet
+
+    - name: Allow zerotier zone to access the internet
+      become: yes
+      command: firewall-cmd --zone=zerotier --add-forward-port=port=0-65535:proto=tcp:toport=0-65535
+      command: firewall-cmd --zone=zerotier --add-forward-port=port=0-65535:proto=udp:toport=0-65535
+
+    - name: Make the changes permanent
+      become: yes
+      command: firewall-cmd --runtime-to-permanent
+
+    - name: Reload the firewall
+      become: yes
+      command: firewall-cmd --reload
 
