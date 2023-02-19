@@ -3,6 +3,10 @@
   hosts: all
   remote_user: root
   vars:
+    zones:
+      - trusted
+      - internal_no_internet
+      - internal_internet
   tasks:
     - name: Transfer find network script
       copy:
@@ -36,31 +40,49 @@
       become: yes
       command: firewall-cmd --zone=public --add-masquerade
 
-    - name: Create the trusted zone
-      become: yes
+    - name: Create missing zones
+      become: true
+      command: firewall-cmd --permanent --get-zones
+      register: firewall_zones
+      changed_when: false
+
+    - name: Create trusted zone
+      become: true
       command: firewall-cmd --permanent --new-zone=trusted
+      when: "'trusted' not in firewall_zones.stdout_lines[0].split(' ')"
+      changed_when: true
 
-    - name: Create the internal_with_internet zone
-      become: yes
-      command: firewall-cmd --permanent --new-zone=internal_with_internet
+    - name: Create internal_internet zone
+      become: true
+      command: firewall-cmd --permanent --new-zone=internalNet
+      when: "'internalNet' not in firewall_zones.stdout_lines[0].split(' ')"
+      changed_when: true
 
-    - name: Create the internal_no_internet zone
-      become: yes
-      command: firewall-cmd --permanent --new-zone=internal_no_internet
+    - name: Create internal_no_internet zone
+      become: true
+      command: firewall-cmd --permanent --new-zone=internalNoNet
+      when: "'internalNoNet' not in firewall_zones.stdout_lines[0].split(' ')"
+      changed_when: true
 
-    - name: Run Firewall and zones script
+    - name: Create Zerotier zone
+      become: true
+      command: firewall-cmd --permanent --new-zone=zerotier
+      when: "'zerotier' not in firewall_zones.stdout_lines[0].split(' ')"
+      changed_when: true
+
+    - name: Run Firewall and zones script to add each port to its zone
       command: "/tmp/connect_ethernet_interfaces_to_zones.sh {{ zerotier_ip_range }}"
       register: network_interface_list
 
     - name: Allow full duplex communication between the internal_with_internet and zerotier zones
       become: yes
-      command: firewall-cmd --permanent --zone=internal_with_internet --add-source=zerotier
-      command: firewall-cmd --permanent --zone=zerotier --add-source=internal_with_internet
+      command: firewall-cmd --permanent --zone=internalNet --add-source={{ zerotier_ip_range }}/24
+      command: firewall-cmd --permanent --zone=zerotier --add-source-zone=internalNet
 
     - name: Allow full duplex communication between the internal_no_internet and internal_with_internet zones
       become: yes
-      command: firewall-cmd --permanent --zone=internal_no_internet --add-source=internal_with_internet
-      command: firewall-cmd --permanent --zone=internal_with_internet --add-source=internal_no_internet
+      command: firewall-cmd --permanent --zone=internalNoNet --add-source-zone=internalNet
+      command: firewall-cmd --permanent --zone=internalNet --add-source-zone=internalNoNet
 
     - name: Allow zerotier zone to access the internet
       become: yes
@@ -74,4 +96,3 @@
     - name: Reload the firewall
       become: yes
       command: firewall-cmd --reload
-

@@ -1,8 +1,8 @@
 #!/bin/bash
 # This bash script will search for ethernet interfaces, assmying that there is an internal interface in the PCI
 # this one is connected to internet, it will be connected to public zone
-# there is a PCIe card with other interfaces eth1/eth2... etc, it will take last interface, in my case eth2, and connect it to internal_with_internet
-# there are other interfaces in the PCI, these will be connected to internal_without_internet.
+# there is a PCIe card with other interfaces eth1/eth2... etc, it will take last interface, in my case eth2, and connect it to internalNet
+# there are other interfaces in the PCI, these will be connected to internalNoNet.
 # Zerotier ip is given as first parameter
 # example: ./connect_ethernet_interfaces_to_zones.sh 10.147.20.0
 
@@ -36,10 +36,10 @@ for name in $names; do
         if [[ $(echo $all_SamePCI | grep $name) ]]; then #eth2/eth1
             if [[ "$name" == "$last_interface" ]]; then # eth 2
                 echo "Ethernet interface $name is the last device with the same PCI ID"
-                firewall-cmd --zone=internal_without_internet --add-interface=$name --permanent
+                firewall-cmd --zone=internalNoNet --add-interface=$name --permanent
             else #eth1
                 echo "Ethernet interface $name is not the last device with the same PCI ID"
-                firewall-cmd --zone=internal_with_internet --add-interface=$name --permanent
+                firewall-cmd --zone=internalNet --add-interface=$name --permanent
             fi
         else #eth 0
             if ping -c 1 -I "$name" www.google.com > /dev/null; then #eth0
