@@ -70,28 +70,7 @@
       when: "'zerotier' not in firewall_zones.stdout_lines[0].split(' ')"
       changed_when: true
 
-    - name: Create localzone for eth1/eth2/zerotier without internet  
-      become: true
-      command: firewall-cmd --permanent --new-zone=localzone
-      when: "'localzone' not in firewall_zones.stdout_lines[0].split(' ')"
-      changed_when: true
-
-    - name: Run Firewall and zones script to add each port to its zone, zerotier to zerotier zone, eth1 to internalNet, eth2 to internalNoNet, eth0 to public 
-      command: "/tmp/connect_ethernet_interfaces_to_zones.sh {{ zerotier_ip_range }}"
-      register: network_interface_list
-
-    - name: Allow full duplex communication between the internalNet/Zerotier/eth0 (eth0/eth2/zt + internet) they are on zerotier zone  
-      become: yes
-      command: firewall-cmd --zone=zerotier --add-masquerade 
-
-    - name: Allow full duplex communication between the internal_no_internet and internal_with_internet zones and zerotier without internet, they are all on localZone
-      become: yes
-      command: firewall-cmd --zone=localzone --add-masquerade 
-
-    - name: Make the changes permanent
-      become: yes
-      command: firewall-cmd --runtime-to-permanent
-
     - name: Reload the firewall
       become: yes
+      command: firewall-cmd --runtime-to-permanent
       command: firewall-cmd --reload
