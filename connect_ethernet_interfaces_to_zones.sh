@@ -30,21 +30,26 @@ for name in $names; do
     if [[ "$name" == zt* && "$name" != br* && "$name" != ovs* ]]; then
         echo "ZeroTier interface: $name"
         # Determine the IP address of the ZeroTier interface and add it to the trusted zone
-        sudo firewall-cmd --zone=trusted --add-source="$ip/24" --permanent
+        sudo firewall-cmd --zone=zerotier --add-source="$ip/24" --permanent
+        firewall-cmd --zone=localzone --add-interface=$name --permanent
     else #not zerotier -> can be eth0/eth1/eth2
         #check if the name of the device belongs to the same pci interfaces
         if [[ $(echo $all_SamePCI | grep $name) ]]; then #eth2/eth1
             if [[ "$name" == "$last_interface" ]]; then # eth 2
                 echo "Ethernet interface $name is the last device with the same PCI ID"
-                firewall-cmd --zone=internalNoNet --add-interface=$name --permanent
+                firewall-cmd --zone=internalNet --add-interface=$name --permanent
+                firewall-cmd --zone=localzone --add-interface=$name --permanent
+                firewall-cmd --zone=zerotier --add-interface=$name --permanent
             else #eth1
                 echo "Ethernet interface $name is not the last device with the same PCI ID"
-                firewall-cmd --zone=internalNet --add-interface=$name --permanent
+                firewall-cmd --zone=internalNoNet --add-interface=$name --permanent
+                firewall-cmd --zone=localzone --add-interface=$name --permanent
             fi
         else #eth 0
             if ping -c 1 -I "$name" www.google.com > /dev/null; then #eth0
                 echo "Ethernet interface $name has internet access"
                 firewall-cmd --zone=public --add-interface=$name --permanent
+                firewall-cmd --zone=zerotier --add-interface=$name --permanent
             fi
         fi
     fi

@@ -14,7 +14,7 @@
         dest: /tmp
         mode: 0777
 
-    - name: Transfer the firewall connection script
+    - name: Transfer the firewall script that connects eth0 to public zone, eth1 to inernetNet, eth2 to internalNoNet, zerotier to trusted zone 
       copy:
         src: connect_ethernet_interfaces_to_zones.sh
         dest: /tmp
@@ -52,42 +52,41 @@
       when: "'trusted' not in firewall_zones.stdout_lines[0].split(' ')"
       changed_when: true
 
-    - name: Create internal_internet zone
+    - name: Create internal_internet (internalNet) zone
       become: true
       command: firewall-cmd --permanent --new-zone=internalNet
       when: "'internalNet' not in firewall_zones.stdout_lines[0].split(' ')"
       changed_when: true
 
-    - name: Create internal_no_internet zone
+    - name: Create internal_no_internet (internalNoNet) zone
       become: true
       command: firewall-cmd --permanent --new-zone=internalNoNet
       when: "'internalNoNet' not in firewall_zones.stdout_lines[0].split(' ')"
       changed_when: true
 
-    - name: Create Zerotier zone
+    - name: Create zerotier zone for Zerotier 
       become: true
       command: firewall-cmd --permanent --new-zone=zerotier
       when: "'zerotier' not in firewall_zones.stdout_lines[0].split(' ')"
       changed_when: true
 
-    - name: Run Firewall and zones script to add each port to its zone
+    - name: Create localzone for eth1/eth2/zerotier without internet  
+      become: true
+      command: firewall-cmd --permanent --new-zone=localzone
+      when: "'localzone' not in firewall_zones.stdout_lines[0].split(' ')"
+      changed_when: true
+
+    - name: Run Firewall and zones script to add each port to its zone, zerotier to zerotier zone, eth1 to internalNet, eth2 to internalNoNet, eth0 to public 
       command: "/tmp/connect_ethernet_interfaces_to_zones.sh {{ zerotier_ip_range }}"
       register: network_interface_list
 
-    - name: Allow full duplex communication between the internal_with_internet and zerotier zones
+    - name: Allow full duplex communication between the internalNet/Zerotier/eth0 (eth0/eth2/zt + internet) they are on zerotier zone  
       become: yes
-      command: firewall-cmd --permanent --zone=internalNet --add-source={{ zerotier_ip_range }}/24
-      command: firewall-cmd --permanent --zone=zerotier --add-source-zone=internalNet
+      command: firewall-cmd --zone=zerotier --add-masquerade 
 
-    - name: Allow full duplex communication between the internal_no_internet and internal_with_internet zones
+    - name: Allow full duplex communication between the internal_no_internet and internal_with_internet zones and zerotier without internet, they are all on localZone
       become: yes
-      command: firewall-cmd --permanent --zone=internalNoNet --add-source-zone=internalNet
-      command: firewall-cmd --permanent --zone=internalNet --add-source-zone=internalNoNet
-
-    - name: Allow zerotier zone to access the internet
-      become: yes
-      command: firewall-cmd --zone=zerotier --add-forward-port=port=0-65535:proto=tcp:toport=0-65535
-      command: firewall-cmd --zone=zerotier --add-forward-port=port=0-65535:proto=udp:toport=0-65535
+      command: firewall-cmd --zone=localzone --add-masquerade 
 
     - name: Make the changes permanent
       become: yes
