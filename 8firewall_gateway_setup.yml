@@ -1,0 +1,100 @@
+---
+- name: Firewall Adjustment Script
+  hosts: all
+  remote_user: root
+  vars:
+    table_name: dt
+    chain_name: incoming
+    chain_name1: natting
+    rule_name: ct
+    zerotier_ip_range: "10.147.20.0/24"
+  tasks:
+    - name: Install nftables
+      become: yes
+      package:
+        name: nftables
+        state: present
+
+    - name: Enable and start nftables service
+      service:
+        name: nftables
+        state: started
+        enabled: true
+
+    - name: Flush all nftables tables
+      shell: "nft list tables | awk '{print $NF}' | xargs -r -l1 nft delete table"
+
+    - name: Create nftables table dt
+      command: nft add table dt
+
+    - name: Add incoming chain to dt table
+      command: nft add chain dt incoming { type filter hook input priority 0\; policy accept\; }
+
+    - name: Add ct rule to incoming chain
+      command: nft add rule dt incoming ct state related,established accept
+
+    - name: Add chain natting to dt table
+      become: true
+      command: nft add chain dt natting { type nat hook postrouting priority 0\; policy accept\; }
+
+    - name: Transfer script that find the ethernet interface names within the PCIe card
+      copy:
+        src: find_network_interfaces_same_pci.sh
+        dest: /tmp
+        mode: 0777
+
+    - name: Transfer find internet interface script
+      copy:
+        src: find_internet_interface.sh
+        dest: /tmp
+        mode: 0777
+
+    - name: Run find same PCI interfaces script
+      command: /bin/bash /tmp/find_network_interfaces_same_pci.sh
+      register: samepci_interface
+
+    - name: print out same pci interfaces
+      debug:
+        msg: "same pci interfaces are {{ samepci_interface.stdout_lines }}"
+
+
+    - name: Run find_internet_interface script
+      command: /bin/bash /tmp/find_internet_interface.sh
+      register: internet_interface
+
+    - name: print out internet interface
+      debug:
+        msg: "internet interface is {{ internet_interface.stdout_lines }}"
+
+
+    - name: Add nft rule to drop incoming traffic on default gateway interface
+      become: true
+      command: nft add rule dt incoming iifname {{ internet_interface.stdout_lines[0] }} drop
+
+    - name: Add nft masquerade gateway interface
+      become: true
+      command: nft add rule dt natting oifname {{ internet_interface.stdout_lines[0] }} masquerade
+
+    - name: Save rules
+      become: true
+      shell: "nft list ruleset | tee /etc/nftables.conf"
+
+    - name: Add OVS Firewall for each PCI interface except last one, accept from it only zt_ip_range
+      become: true
+      shell: "ovs-ofctl add-flow br0 'priority=200,ip,nw_dst={{ zerotier_ip_range }},in_port={{ item }},actions=normal'"
+      loop: "{{ samepci_interface.stdout_lines[:-1] }}"
+
+    - name: Add OVS Firewall for each PCI interface except last one, drop from it except zt_ip_range
+      become: true
+      shell: "ovs-ofctl add-flow br0 'priority=199,ip,in_port={{ item }},actions=drop'"
+      loop: "{{ samepci_interface.stdout_lines[:-1] }}"
+
+    - name: Remove copied bash scripts
+      become: true
+      file:
+        path: "{{ item }}"
+        state: absent
+      with_items:
+        - "/tmp/find_internet_interface.sh"
+        - "/tmp/find_network_interfaces_same_pci.sh"
+
