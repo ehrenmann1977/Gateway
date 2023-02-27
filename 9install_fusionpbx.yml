@@ -9,9 +9,24 @@
         dest: /tmp/pre-install.sh
       register: result
 
+    - name: Change permission of file
+      file:
+        path: /tmp/pre-install.sh
+        mode: '+x'
+      register: file_permission_changed
+
+    - name: Install Screen
+      become: yes
+      package:
+        name: screen
+        state: present
+
+    - name: Enable logging for a screen session
+      command: |
+        screen -L -dmS mysession -Logfile /tmp/install_fusionpbx.txt
+
     - name: Run pre-install script
-      command: sh /tmp/pre-install.sh
-      when: result.changed
+      command: sh -c "screen -S mysession -X stuff '/tmp/pre-install.sh\n'"
 
     - name: Edit config.sh file
       lineinfile:
@@ -30,41 +45,12 @@
         - { line: 'database_port={{ database_port | default("5432") }}' }
         - { line: 'letsencrypt_folder={{ letsencrypt_folder | default("true") }}' }
 
-    - name: Install Screen
-      become: yes
-      package:
-        name: screen
-        state: present
-
-    - name: Create a new screen session
-      command: screen -d -m
-      register: screen_session
-
-    - name: Get screen session ID
-      shell: screen -ls | awk -F"." '/[0-9]*\s*\(Detached\)/ {gsub(/^[[:space:]]+/, "", $1); print $1}' | tail -1
-      register: screen_session_id
-      when: screen_session is changed
-
-    - name: Print screen session ID
-      debug:
-       var: screen_session_id.stdout
-      when: screen_session is changed
-
-    - name: Create a new screen session
-      command: screen -r {{ screen_session_id.stdout }} -X log on
-      become: true
-
-    - name: Enable logging for a screen session
-      command: screen -r {{ screen_session_id.stdout }} -X logfile /tmp/install_fusionpbx.txt
-      args:
-        creates: /tmp/install_fusionpbx.txt
 
     - name: Install Fusion PBX using screen
-      command: "screen -S {{ screen_session_id.stdout }} -d -m ./install.sh"
-      args:
-        chdir: /usr/src/fusionpbx-install.sh/debian
+      command: sh -c "screen -S mysession -X stuff 'cd /usr/src/fusionpbx-install.sh/debian && ./install.sh\n'"
       register: fusion_pbx_install
 
     - name: Debug screen session
       debug:
-        msg: "Screen session with ID {{ screen_session_id }} is being logged on and output is being redirected to a file. To trace the progress, connect from another shell, and type tail -f //tmp//install_fusionpbx.txt"
+        msg: "Screen session with name mysession is being logged on and output is being redirected to a file. To trace the progress, connect from another shell, and type tail -f /tmp/install_fusionpbx.txt"
+
