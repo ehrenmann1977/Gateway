@@ -4,10 +4,10 @@
   remote_user: root
   tasks:
      - name: Transfer the script
-       copy: src=find_network_interfaces_same_pci.sh dest=/tmp mode=0777
+       copy: src=find_interfaces.sh dest=/tmp mode=0777
 
      - name: Run similar names script
-       command: "/tmp/find_network_interfaces_same_pci.sh"
+       command: "/tmp/find_interfaces.sh -i 2"
        register: network_interface_list
 
      - name: Process network interfaces
@@ -23,7 +23,7 @@
 
      - name: Remove the shell script
        file:
-         path: /tmp/find_network_interfaces_same_pci.sh
+         path: /tmp/find_interfaces.sh
          state: absent
 
      - name: Create OVS bridge and add interfaces

@@ -39,18 +39,12 @@
 
     - name: Transfer script that find the ethernet interface names within the PCIe card
       copy:
-        src: find_network_interfaces_same_pci.sh
-        dest: /tmp
-        mode: 0777
-
-    - name: Transfer find internet interface script
-      copy:
-        src: find_internet_interface.sh
+        src: find_interfaces.sh
         dest: /tmp
         mode: 0777
 
     - name: Run find same PCI interfaces script
-      command: /bin/bash /tmp/find_network_interfaces_same_pci.sh
+      command: /bin/bash /tmp/find_interfaces.sh -i 2
       register: samepci_interface
 
     - name: print out same pci interfaces
@@ -59,7 +53,7 @@
 
 
     - name: Run find_internet_interface script
-      command: /bin/bash /tmp/find_internet_interface.sh
+      command: /bin/bash /tmp/find_interfaces.sh -i 1
       register: internet_interface
 
     - name: print out internet interface
@@ -95,6 +89,5 @@
         path: "{{ item }}"
         state: absent
       with_items:
-        - "/tmp/find_internet_interface.sh"
-        - "/tmp/find_network_interfaces_same_pci.sh"
+        - "/tmp/find_interfaces.sh"
 
