@@ -2,7 +2,7 @@
 - name: Set VGA mode to 800x600
   hosts: all
   become: yes
-  
+
   tasks:
     - name: Set GRUB_CMDLINE_LINUX_DEFAULT
       lineinfile:
@@ -35,7 +35,40 @@
       notify:
         - Reload systemd
 
+    - name: Create network_up.sh script
+      copy:
+        content: |
+          #!/bin/bash
+          for interface in $(ip link | awk -F': ' '{print $2}' | grep -v '^lo$'); do
+              ip link set $interface up
+          done
+        dest: /usr/local/bin/network_up.sh
+        mode: '0755'
+
+    - name: Create network_up.service file
+      copy:
+        content: |
+          [Unit]
+          Description=Set all Ethernet interfaces up
+          After=network-online.target
+
+          [Service]
+          Type=oneshot
+          ExecStart=/usr/local/bin/network_up.sh
+
+          [Install]
+          WantedBy=multi-user.target
+        dest: /etc/systemd/system/network_up.service
+        mode: '0644'
+
+    - name: Enable and start network_up service
+      systemd:
+        name: network_up.service
+        enabled: yes
+        state: started
+
   handlers:
     - name: Reload systemd
       systemd:
         daemon_reload: yes
+
