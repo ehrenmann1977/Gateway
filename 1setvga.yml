@@ -15,3 +15,27 @@
     - name: Update GRUB configuration
       command: update-grub
       become: yes
+
+    - name: Create gateway_settings service file
+      copy:
+        dest: /etc/systemd/system/gateway_settings.service
+        content: |
+          [Unit]
+          Description=Gateway settings
+          After=network.target
+          Wants=network.target
+
+          [Service]
+          Type=oneshot
+          ExecStart=/usr/bin/dhclient -v
+          RemainAfterExit=no
+
+          [Install]
+          WantedBy=multi-user.target
+      notify:
+        - Reload systemd
+
+  handlers:
+    - name: Reload systemd
+      systemd:
+        daemon_reload: yes
