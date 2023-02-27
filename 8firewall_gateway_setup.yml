@@ -22,7 +22,12 @@
         enabled: true
 
     - name: Flush all nftables tables
-      shell: "nft list tables | awk '{print $NF}' | xargs -r -l1 nft delete table"
+      shell: |
+        #!/bin/bash
+        nft list tables |
+        while read table; do
+          nft delete $table
+        done
 
     - name: Create nftables table dt
       command: nft add table dt
