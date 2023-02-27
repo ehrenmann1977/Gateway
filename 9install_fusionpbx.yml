@@ -50,10 +50,12 @@
        var: screen_session_id.stdout_lines
       when: screen_session is changed
 
+    - name: Create a new screen session
+      command: screen -r {{ screen_session_id }} -X log on
+      become: true
+
     - name: Enable logging for a screen session
-      command: |
-        screen -r {{ screen_session_id }} -X log on
-        screen -r {{ screen_session_id }} -X logfile /tmp/install_fusionpbx.txt
+      command: screen -r {{ screen_session_id }} -X logfile /tmp/install_fusionpbx.txt
       args:
         creates: /tmp/install_fusionpbx.txt
 
@@ -65,8 +67,4 @@
 
     - name: Debug screen session
       debug:
-        msg: "Screen session with ID {{ screen_session_id }} is being logged on and output is being redirected to {{ logfile_path }}"
-        msg: "to trace the progress, connect from another shell, and type tail -d /tmp/install_fusionpbx.txt  
-      vars:
-        screen_session_id: "{{ screen_session_id }}"
-        logfile_path: "/tmp/install_fusionpbx.txt"
+        msg: "Screen session with ID {{ screen_session_id }} is being logged on and output is being redirected to a fiile. To trace the progress, connect from another shell, and type tail -d /tmp/install_fusionpbx.txt  "
