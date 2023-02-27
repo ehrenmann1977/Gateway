@@ -41,30 +41,30 @@
       register: screen_session
 
     - name: Get screen session ID
-      shell: screen -ls | awk -F"." '/[0-9]*\s*\(Detached\)/ {print $1}' | tail -1
+      shell: screen -ls | awk -F"." '/[0-9]*\s*\(Detached\)/ {gsub(/^[[:space:]]+/, "", $1); print $1}' | tail -1
       register: screen_session_id
       when: screen_session is changed
 
     - name: Print screen session ID
       debug:
-       var: screen_session_id.stdout_lines
+       var: screen_session_id.stdout
       when: screen_session is changed
 
     - name: Create a new screen session
-      command: screen -r {{ screen_session_id }} -X log on
+      command: screen -r {{ screen_session_id.stdout }} -X log on
       become: true
 
     - name: Enable logging for a screen session
-      command: screen -r {{ screen_session_id }} -X logfile /tmp/install_fusionpbx.txt
+      command: screen -r {{ screen_session_id.stdout }} -X logfile /tmp/install_fusionpbx.txt
       args:
         creates: /tmp/install_fusionpbx.txt
 
     - name: Install Fusion PBX using screen
-      command: sh -c "screen -S screen_session -d -m ./install.sh"
+      command: "screen -S {{ screen_session_id.stdout }} -d -m ./install.sh"
       args:
         chdir: /usr/src/fusionpbx-install.sh/debian
       register: fusion_pbx_install
 
     - name: Debug screen session
       debug:
-        msg: "Screen session with ID {{ screen_session_id }} is being logged on and output is being redirected to a fiile. To trace the progress, connect from another shell, and type tail -d /tmp/install_fusionpbx.txt  "
+        msg: "Screen session with ID {{ screen_session_id }} is being logged on and output is being redirected to a file. To trace the progress, connect from another shell, and type tail -f //tmp//install_fusionpbx.txt"
