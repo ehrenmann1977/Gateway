@@ -28,6 +28,12 @@
     - name: Run pre-install script
       command: sh -c "screen -S mysession -X stuff '/tmp/pre-install.sh\n'"
 
+    - name: Wait for config.sh to be downloaded
+      wait_for:
+        path: /usr/src/fusionpbx-install.sh/debian/resources/config.sh
+        state: present
+      register: file_downloaded
+
     - name: Edit config.sh file
       lineinfile:
         dest: /usr/src/fusionpbx-install.sh/debian/resources/config.sh
@@ -45,14 +51,14 @@
         - { line: 'database_port={{ database_port | default("5432") }}' }
         - { line: 'letsencrypt_folder={{ letsencrypt_folder | default("true") }}' }
 
-    - name: Comment out fail2ban.sh line
+    - name: Comment out fail2ban.sh line in the installation script
       replace:
         path: /usr/src/fusionpbx-install.sh/debian/install.sh
         regexp: '^(.*fail2ban\.sh.*)$'
         replace: '#\1'
         backup: yes
 
-    - name: Comment out iptables.sh line
+    - name: Comment out iptables.sh line in the installation script
       replace:
         path: /usr/src/fusionpbx-install.sh/debian/install.sh
         regexp: '^(.*iptables\.sh.*)$'
