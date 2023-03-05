@@ -1,3 +1,4 @@
+---
 - name: Monitor file in real-time
   hosts: all
   gather_facts: no
@@ -11,4 +12,5 @@
     - name: Print real-time updates of the file
       debug:
         var: tail_output.stdout_lines
+      delay: 10
 

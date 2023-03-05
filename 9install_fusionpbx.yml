@@ -45,6 +45,19 @@
         - { line: 'database_port={{ database_port | default("5432") }}' }
         - { line: 'letsencrypt_folder={{ letsencrypt_folder | default("true") }}' }
 
+    - name: Comment out fail2ban.sh line
+      replace:
+        path: /usr/src/fusionpbx-install.sh/debian/install.sh
+        regexp: '^(.*fail2ban\.sh.*)$'
+        replace: '#\1'
+        backup: yes
+
+    - name: Comment out iptables.sh line
+      replace:
+        path: /usr/src/fusionpbx-install.sh/debian/install.sh
+        regexp: '^(.*iptables\.sh.*)$'
+        replace: '#\1'
+        backup: no
 
     - name: Install Fusion PBX using screen
       command: sh -c "screen -S mysession -X stuff 'cd /usr/src/fusionpbx-install.sh/debian && ./install.sh\n'"
