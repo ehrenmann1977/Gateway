@@ -23,7 +23,7 @@
 
     - name: Enable logging for a screen session
       command: |
-        screen -L -dmS mysession -Logfile /tmp/install_fusionpbx.txt
+        screen -L -dmS mysession -Logfile /var/log/install_fusionpbx.txt
 
     - name: Run pre-install script
       command: sh -c "screen -S mysession -X stuff '/tmp/pre-install.sh\n'"
