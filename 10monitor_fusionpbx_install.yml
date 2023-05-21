@@ -1,16 +1,19 @@
 ---
 - name: Monitor file in real-time
   hosts: all
-  gather_facts: no
   tasks:
-    - name: Run "tail" command on file
-      command: tail -f /tmp/install_fusionpbx.txt
-      register: tail_output
-      async: 1
+    - name: Define empty variable
+      set_fact:
+       cat_output: ""
+
+    - name: Monitor Log File
+      command: cat -n /tmp/install_fusionpbx.txt | tail -n 5
+      register: cat_output
+      async: 600
       poll: 0
 
     - name: Print real-time updates of the file
       debug:
         var: tail_output.stdout_lines
       delay: 10
-
+      when: tail_output is defined
