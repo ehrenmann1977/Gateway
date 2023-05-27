@@ -71,6 +71,7 @@ fi
 #dialog --msgbox "$output" 0 0
 
 
+#Step 3: create the  settings and create zerotier device
 ansible-playbook 1setvga.yml -i inventory.ini --limit $device_local_ip
 ansible-playbook 2zerotier.yml -i inventory.ini --limit $device_local_ip
 ansible-playbook 3zerto_tier_connect.yml -i inventory.ini -e network_id_var=$zerotier_network_id --limit $device_local_ip
@@ -81,7 +82,7 @@ dialog --msgbox "$message" 0 0
 
 ansible-playbook 4vswitch_install.yml -i inventory.ini  --limit $device_local_ip
 
-
+#detect network devices except local host
 echo "detecting network devices"
 ansible_output=$(ansible-playbook 5find_network_interfaces.yml -i inventory.ini  --limit $device_local_ip)
 
@@ -100,5 +101,10 @@ else
     echo "$ansible_output" >&2
 fi
 
-gui_network_questions1.sh $network_interfaces
+
+#Step 3 create the network questions qui
+# this will include also creating the bridge and firewall stuff
+
+gui_network_questions1.sh $network_interfaces $device_local_ip $zerotier_device_ip $zerotier_device_ip_mask
+
 

@@ -3,7 +3,7 @@
 #  script to find the network interfaces on the host
 #  -i 1  to find the internet interface ex. eth0
 #  -i 2  to find the ethernet interfaces that reside on same PCI Device ex. eth1,eth2
-#  -i 3  to find all physical ethernet interfaces
+#  -i 3  to find all physical ethernet interfaces except local host
 
 find_pairs() {
   names=$(ip a | grep BROADCAST | awk '{print $2}' | sed 's/://')
