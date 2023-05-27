@@ -3,7 +3,7 @@
 #  script to find the network interfaces on the host
 #  -i 1  to find the internet interface ex. eth0
 #  -i 2  to find the ethernet interfaces that reside on same PCI Device ex. eth1,eth2
-
+#  -i 3  to find all physical ethernet interfaces
 
 find_pairs() {
   names=$(ip a | grep BROADCAST | awk '{print $2}' | sed 's/://')
@@ -65,6 +65,9 @@ if [[ "$1" == "-i" ]]; then
   elif [[ "$2" == "2" ]]; then
     # Call the second script
     find_pairs
+  elif [[ "$2" == "3" ]]; then
+    # Call the third script show all physical ethernet connections
+    ip a | awk '/^[0-9]+: (eth|en|eno|ens|enp)/ {print substr($2, 1, length($2)-1)}' | grep -vE '^lo$'
   else
     echo "Invalid argument for -i"
     exit 1
