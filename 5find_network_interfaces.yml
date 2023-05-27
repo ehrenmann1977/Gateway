@@ -1,0 +1,27 @@
+---
+- name: Transfer and execute a script.
+  hosts: all
+  remote_user: root
+  tasks:
+     - name: Transfer the script
+       copy: src=find_interfaces.sh dest=/tmp mode=0777
+
+     - name: Run all network intrfaces except local host
+       command: "/tmp/find_interfaces.sh -i 3"
+       register: network_interface_list
+
+     - name: Process network interfaces
+       set_fact:
+         network_interfaces: "{{ network_interface_list.stdout_lines }}"
+
+     - name: Loop over network interfaces and print the output
+       debug:
+         msg: "Processing network interface: {{ item }}"
+       loop: "{{ network_interfaces }}"
+       loop_control:
+         loop_var: item
+
+     - name: Remove the shell script
+       file:
+         path: /tmp/find_interfaces.sh
+         state: absent
