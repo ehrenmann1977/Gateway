@@ -1,8 +1,30 @@
 #!/bin/bash
 
 # Step 1: Install 'dialog' if needed
+# Check if dialog is installed
+if ! command -v dialog >/dev/null 2>&1; then
+  echo "Dialog is not installed. Installing..."
+  
+  # Check if the package manager is apt or yum
+  if command -v apt >/dev/null 2>&1; then
+    # Install dialog using apt
+    sudo apt update
+    sudo apt install -y dialog
+  elif command -v yum >/dev/null 2>&1; then
+    # Install dialog using yum
+    sudo yum update
+    sudo yum install -y dialog
+  else
+    echo "Unable to determine the package manager. Please install dialog manually."
+    exit 1
+  fi
+  
+  echo "Dialog has been installed."
+else
+  echo "Dialog is already installed."
+fi
 
-# Step 2: Create 'gui.sh' and make it executable
+# Step 2: Run 'gui.sh' and make it executable
 
 #!/bin/bash
 
