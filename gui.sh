@@ -82,7 +82,23 @@ dialog --msgbox "$message" 0 0
 ansible-playbook 4vswitch_install.yml -i inventory.ini  --limit $device_local_ip
 
 
-echo "detect network devices and create the softswitch"
+echo "detecting network devices"
+ansible_output=$(ansible-playbook 5find_network_interfaces.yml -i inventory.ini  --limit $device_local_ip)
 
+# Check if the Ansible script executed successfully
+if [ $? -eq 0 ]; then
+    # Extract the network_interfaces variable using grep or any other text processing tool
+    network_interfaces=$(echo "$ansible_output" | grep -oP '(?<=network_interfaces": )\[.*?\]')
 
+    # Print the network interfaces
+    echo "Network Interfaces:"
+    echo "$network_interfaces"
+else
+    # Print the error message if the Ansible script failed
+    echo "Error running the Ansible script."
+    echo "Error message:"
+    echo "$ansible_output" >&2
+fi
+
+gui_network_questions1.sh $network_interfaces
 

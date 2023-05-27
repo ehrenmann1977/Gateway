@@ -1,4 +1,26 @@
 #!/bin/bash
+###########################################################
+# Script: gui_network_questions.sh
+# Author: Dr. Sherif Omran
+# Date: 27.05.2023
+# Description: This script presents a dialog-based interface
+#              to configure network settings for a list of
+#              devices. It allows selecting options such as
+#              "Main Router Internet," "With Internet," and
+#              "Without Internet" for each device. The list 
+#              of devices can be given in the command line
+#
+# Notes: 
+#
+#   - Requires 'dialog' package to be installed.
+#   - Devices can be provided as command line arguments.
+#     and if not provided, it will use default 5 devices
+#
+#         gui_network_questions device1 device2
+#         gui_network_questions
+#
+###########################################################
+
 
 # Step 1: Install 'dialog' if needed
 # Check if dialog is installed
@@ -25,11 +47,12 @@ else
 fi
 
 # Step 2: Run 'gui.sh' and make it executable
-
-#!/bin/bash
-
-# Array of device names
-devices=("Device 1" "Device 2" "Device 3" "Device 4" "Device 5")
+# If devices are provided as command line arguments, use them; otherwise, use the default devices array
+if [ $# -gt 0 ]; then
+  devices=("$@")
+else
+  devices=("Device 1" "Device 2" "Device 3" "Device 4" "Device 5")
+fi
 
 # Array to store selected options for each device
 selected_options=()

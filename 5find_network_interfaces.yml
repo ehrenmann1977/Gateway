@@ -25,3 +25,7 @@
        file:
          path: /tmp/find_interfaces.sh
          state: absent
+
+     - name: Return network_interfaces variable
+       return:
+         result: "{{ network_interfaces }}"
