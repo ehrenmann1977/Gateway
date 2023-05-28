@@ -29,6 +29,9 @@
 ###########################################################
 
 
+
+
+
 # Step 1: Install 'dialog' if needed
 # Check if dialog is installed
 if ! command -v dialog >/dev/null 2>&1; then
@@ -196,6 +199,12 @@ without_internet_devices_string=$(IFS=,; echo "${without_internet_devices[*]}")
 without_internet_devices_string="${without_internet_devices_string//,,/,}"
 without_internet_devices_string="${without_internet_devices_string%,}"
 
+#here are main router devices, although it is only 1 device for now, but i convert it
+#because i intend to bind multiple main devices later on
+main_router_devices_string=$(IFS=,; echo "${main_router_devices[*]}")
+main_router_devices_string="${main_router_devices_string//,,/,}"
+main_router_devices_string="${main_router_devices_string%,}"
+
 
 read -p "Press Enter to start creating the bridge devices ..."
 
@@ -221,4 +230,17 @@ ansible-playbook 7create_br0_file.yml -e "with_internet_devices=$with_internet_d
                          -e "bridge_ip=$zerotier_ip" \
                          -e "bridge_netmask=$zerotier_subnet_mask" \
                          -i inventory.ini --limit "$device_local_ip_address"
+
+#Step 5 allow tranffic forwarder 
+ansible-playbook 8allow_traffic_forward.yml -i inventory.ini --limit "$device_local_ip_address"
+
+
+#Step 6 create the firwall, pass zerotier ip 10.147.20.0 with last variable 0
+read -p "Press endter to create the firewall .."
+ansible-playbook 8firewall_gateway_setup.yml -i inventory.ini \
+                         -e "zerotier_ip_range=$zerotier_ip"  \
+                         -e "without_internet_devices=$without_internet_devices_string" \
+                         -e "main_router_devices=$main_router_devices_string" \
+                         --limit "$device_local_ip_address"
+
 
