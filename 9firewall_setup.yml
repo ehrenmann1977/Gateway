@@ -65,12 +65,12 @@
       become: true
       shell: "nft list ruleset | tee /etc/nftables.conf"
 
-    - name: Add OVS Firewall for each ethernet interface without_internet_devices, accept from it only zt_ip_range
+    - name: Add OVS Firewall for each ethernet interface that is not allowed to have internet, can access only zt_ip_range
       become: true
       shell: "ovs-ofctl add-flow br0 'priority=200,ip,nw_dst={{ zerotier_ip_range }},in_port={{ item }},actions=normal'"
       loop: "{{ without_internet_devices_string_var.split(',') }}"
 
-    - name: Add OVS Firewall for each PCI interface with_internet_devices, drop from it except zt_ip_range
+    - name: Add OVS Firewall for each PCI interface without_internet_devices, drop from it except zt_ip_range
       become: true
       shell: "ovs-ofctl add-flow br0 'priority=199,ip,in_port={{ item }},actions=drop'"
       loop: "{{ without_internet_devices_string_var.split(',') }}"
