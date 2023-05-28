@@ -70,7 +70,8 @@ convert_to_network_range() {
 }
 
 
-# Step 1: Install 'dialog' if needed
+# Step 1: Install 'dialog' and 'bc' if needed
+#
 # Check if dialog is installed
 if ! command -v dialog >/dev/null 2>&1; then
   echo "Dialog is not installed. Installing..."
@@ -93,6 +94,27 @@ if ! command -v dialog >/dev/null 2>&1; then
 else
   echo "Dialog is already installed."
 fi
+
+# Check if bc is installed
+if ! command -v bc &> /dev/null; then
+    echo "bc is not installed. Installing..."
+    
+    # Install bc using package manager (adjust the package manager command as per your distribution)
+    if command -v apt-get &> /dev/null; then
+        sudo apt-get update
+        sudo apt-get install -y bc
+    elif command -v yum &> /dev/null; then
+        sudo yum install -y bc
+    elif command -v dnf &> /dev/null; then
+        sudo dnf install -y bc
+    else
+        echo "Unable to install bc. Please install it manually."
+        exit 1
+    fi
+    
+    echo "bc has been installed."
+fi
+
 
 #Step 2: Extract ip from last argument and devices from other arguments
 # Get the IP address from the 3rd last argument
