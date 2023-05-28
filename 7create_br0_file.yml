@@ -10,6 +10,9 @@
     bridge_ip_var: "{{ bridge_ip }}"
     bridge_netmask_var: "{{ bridge_netmask }}"
     network_id_var: "{{ network_id }}"
+    without_internet_devices_string_var: "{{ without_internet_devices_string }}"
+    with_internet_devices_string_var: "{{ with_internet_devices_string }}"
+
 
   tasks:
   - name: Create dummy file
@@ -33,20 +36,6 @@
     debug:
       msg: "The dummy file does not exist"
     when: not file_stat.stat.exists
-
-  - name: Transfer the script
-    copy:
-      src: find_interfaces.sh
-      dest: /tmp/find_interfaces.sh
-      mode: 0777
-
-  - name: Run similar names script
-    command: "/tmp/find_interfaces.sh -i 2"
-    register: network_interface_list
-
-  - name: Process network interfaces
-    set_fact:
-      ethernet_ports: "{{ network_interface_list.stdout_lines }}"
 
   - name: Create Ethernet file for bridge 0
     lineinfile:
@@ -72,20 +61,20 @@
       line: "  netmask {{ bridge_netmask }}"
       state: present
 
-  - name: Detect Zerotier network device name using given network id
-    shell: "zerotier-cli listnetworks | awk '{if ($3 == \"{{ zt_network_id }}\" ) print $8}'"
-    register: zt_device_name
+#  - name: Detect Zerotier network device name using given network id
+#    shell: "zerotier-cli listnetworks | awk '{if ($3 == \"{{ zt_network_id }}\" ) print $8}'"
+#    register: zt_device_name
 
-  - name: Debug Zerotier device name
-    debug:
-      msg: "Detected Zerotier device name {{ zt_device_name.stdout_lines }}"
+#  - name: Debug Zerotier device name
+#    debug:
+#      msg: "Detected Zerotier device name {{ zt_device_name.stdout_lines }}"
 
-  - name: Add Zerotier Tap port to bridge
-    lineinfile:
-      dest: /etc/network/interfaces.d/br0
-      line: "  bridge_ports {{ item }}"
-      state: present
-    with_items: "{{ zt_device_name.stdout_lines }}"
+#  - name: Add Zerotier Tap port to bridge
+#    lineinfile:
+#      dest: /etc/network/interfaces.d/br0
+#      line: "  bridge_ports {{ item }}"
+#      state: present
+#    with_items: "{{ zt_device_name.stdout_lines }}"
 
   - name: Add Ethernet ports to bridge
     lineinfile:

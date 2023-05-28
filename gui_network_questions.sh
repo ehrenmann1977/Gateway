@@ -46,7 +46,7 @@ if ! command -v dialog >/dev/null 2>&1; then
     echo "Unable to determine the package manager. Please install dialog manually."
     exit 1
   fi
-  
+
   echo "Dialog has been installed."
 else
   echo "Dialog is already installed."
@@ -68,7 +68,7 @@ if [ $# -gt 3 ]; then
 else
   devices=("Device 1" "Device 2" "Device 3" "Device 4" "Device 5")
 fi
-
+7create_br0_file.yml
 # Exclude the ZeroTier device (starts with "zt")
 zt_device=""
 for device in "${devices[@]}"; do
@@ -191,6 +191,8 @@ done
 with_internet_devices_string=$(IFS=,; echo "${with_internet_devices[*]}")
 without_internet_devices_string=$(IFS=,; echo "${without_internet_devices[*]}")
 
+read -p "Press Enter to continue to 6 ..."
+
 # Run the Ansible playbook and pass the devices strings as extra variables
 # this will create the ovs bridge and add all devices including zerotier to the br0, it will exclude the main router internet device
 ansible-playbook 6bridge_network_device_same_PCI.yml -e "with_internet_devices=$with_internet_devices_string" \
@@ -203,4 +205,12 @@ ansible-playbook 6bridge_network_device_same_PCI.yml -e "with_internet_devices=$
 # with_internet_devices/without_internet_devices because they are all added to the bridge, except main router device, 
 # i need also to pass zerotier device in this $zt_device
 
+read -p "Press Enter to continue to 7..."
+
+ansible-playbook 7create_br0_file.yml -e "with_internet_devices=$with_internet_devices_string" \
+                         -e "without_internet_devices=$without_internet_devices_string" \
+                         -e "zt_device=$zt_device" \
+                         -e "bridge_ip=$zerotier_ip" \
+                         -e "bridge_netmask=$zerotier_subnet_mask" \
+                         -i inventory.ini --limit "$device_local_ip_address"
 
