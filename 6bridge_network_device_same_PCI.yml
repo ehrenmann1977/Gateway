@@ -3,11 +3,20 @@
   hosts: all
   remote_user: root
   tasks:
-    - name: Print the devices
+
+    - name: Print zerotier ip
+      debug:
+        var: zerotier_ip
+
+    - name: print zerotier subnet mask
+      debug:
+        var: zerotier_subnet_mask
+
+    - name: Print network interfaces allowed to access internet
       debug:
         var: with_internet_devices
 
-    - name: Print the devices
+    - name: Print network interfaces not allowed to access internet
       debug:
         var: without_internet_devices
 
@@ -18,3 +27,7 @@
       command: "ovs-vsctl add-port br0 {{ item }}"
       with_items: "{{ with_internet_devices.split(',') + without_internet_devices.split(',') }}"
       when: item|trim != ''
+
+    - name: Add IP address to br0 bridge
+      command: ifconfig br0 up {{ zerotier_ip }} netmask {{ zerotier_subnet_mask }}
+

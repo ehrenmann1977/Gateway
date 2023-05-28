@@ -189,14 +189,22 @@ echo "ZeroTier Subnet Mask: $zerotier_subnet_mask"
 
 # Convert the arrays to comma-separated strings
 with_internet_devices_string=$(IFS=,; echo "${with_internet_devices[*]}")
-without_internet_devices_string=$(IFS=,; echo "${without_internet_devices[*]}")
+with_internet_devices_string="${with_internet_devices_string//,,/,}"
+with_internet_devices_string="${with_internet_devices_string%,}"
 
-read -p "Press Enter to continue to 6 ..."
+without_internet_devices_string=$(IFS=,; echo "${without_internet_devices[*]}")
+without_internet_devices_string="${without_internet_devices_string//,,/,}"
+without_internet_devices_string="${without_internet_devices_string%,}"
+
+
+read -p "Press Enter to start creating the bridge devices ..."
 
 # Run the Ansible playbook and pass the devices strings as extra variables
 # this will create the ovs bridge and add all devices including zerotier to the br0, it will exclude the main router internet device
 ansible-playbook 6bridge_network_device_same_PCI.yml -e "with_internet_devices=$with_internet_devices_string" \
                          -e "without_internet_devices=$without_internet_devices_string" \
+                         -e "zerotier_ip=$zerotier_ip" \
+                         -e "zerotier_subnet_mask=$zerotier_subnet_mask" \
                          -i inventory.ini --limit "$device_local_ip_address"
 
 
@@ -205,7 +213,7 @@ ansible-playbook 6bridge_network_device_same_PCI.yml -e "with_internet_devices=$
 # with_internet_devices/without_internet_devices because they are all added to the bridge, except main router device, 
 # i need also to pass zerotier device in this $zt_device
 
-read -p "Press Enter to continue to 7..."
+read -p "Press Enter to create the bridge file..."
 
 ansible-playbook 7create_br0_file.yml -e "with_internet_devices=$with_internet_devices_string" \
                          -e "without_internet_devices=$without_internet_devices_string" \

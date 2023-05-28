@@ -10,8 +10,8 @@
     bridge_ip_var: "{{ bridge_ip }}"
     bridge_netmask_var: "{{ bridge_netmask }}"
     network_id_var: "{{ network_id }}"
-    without_internet_devices_string_var: "{{ without_internet_devices_string }}"
-    with_internet_devices_string_var: "{{ with_internet_devices_string }}"
+    without_internet_devices_string_var: "{{ without_internet_devices }}"
+    with_internet_devices_string_var: "{{ with_internet_devices }}"
 
 
   tasks:
@@ -81,12 +81,7 @@
       dest: /etc/network/interfaces.d/br0
       line: "  bridge_ports {{ item }}"
       state: present
-    with_items: "{{ ethernet_ports }}"
-
-  - name: Remove the transferred script
-    file:
-      path: /tmp/find_interfaces.sh
-      state: absent
+    with_items: "{{ without_internet_devices_string_var.split(',') + with_internet_devices_string_var.split(',') }}"
 
   handlers:
     - name: restart network
