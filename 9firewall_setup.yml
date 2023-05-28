@@ -7,7 +7,12 @@
     chain_name: incoming
     chain_name1: natting
     rule_name: ct
-    zerotier_ip_range: "10.147.20.0/24"
+
+    zerotier_ip_range: "{{ zerotier_ip_range }}"
+    without_internet_devices_string_var: "{{ without_internet_devices }}"
+    with_internet_devices_string_var: "{{ with_internet_devices }}"
+    main_router_devices_var: "{{ main_router_devices }}"
+
   tasks:
     - name: Install nftables
       become: yes
@@ -42,38 +47,31 @@
       become: true
       command: nft add chain dt natting { type nat hook postrouting priority 0\; policy accept\; }
 
-
     - name: print out internet interface
       debug:
-        msg: "main router internet interface is {{ main_router_devices.stdout_lines }}"
+        msg: "main router internet interface is {{ main_router_devices_var }}"
 
     - name: Add nft rule to drop incoming traffic on default gateway interface
       become: true
-      command: nft add rule dt incoming iifname {{ internet_interface.stdout_lines[0] }} drop
+      command: nft add rule dt incoming iifname {{ item }} drop
+      with_items: "{{ main_router_devices_var.split(',') }}"
 
     - name: Add nft masquerade gateway interface
       become: true
-      command: nft add rule dt natting oifname {{ internet_interface.stdout_lines[0] }} masquerade
+      command: nft add rule dt natting oifname {{ item }} masquerade
+      with_items: "{{ main_router_devices_var.split(',') }}"
 
     - name: Save rules
       become: true
       shell: "nft list ruleset | tee /etc/nftables.conf"
 
-    - name: Add OVS Firewall for each PCI interface except last one, accept from it only zt_ip_range
+    - name: Add OVS Firewall for each ethernet interface without_internet_devices, accept from it only zt_ip_range
       become: true
       shell: "ovs-ofctl add-flow br0 'priority=200,ip,nw_dst={{ zerotier_ip_range }},in_port={{ item }},actions=normal'"
-      loop: "{{ samepci_interface.stdout_lines[:-1] }}"
+      loop: "{{ without_internet_devices_string_var.split(',') }}"
 
-    - name: Add OVS Firewall for each PCI interface except last one, drop from it except zt_ip_range
+    - name: Add OVS Firewall for each PCI interface with_internet_devices, drop from it except zt_ip_range
       become: true
       shell: "ovs-ofctl add-flow br0 'priority=199,ip,in_port={{ item }},actions=drop'"
-      loop: "{{ samepci_interface.stdout_lines[:-1] }}"
-
-    - name: Remove copied bash scripts
-      become: true
-      file:
-        path: "{{ item }}"
-        state: absent
-      with_items:
-        - "/tmp/find_interfaces.sh"
+      loop: "{{ without_internet_devices_string_var.split(',') }}"
 

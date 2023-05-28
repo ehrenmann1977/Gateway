@@ -29,7 +29,45 @@
 ###########################################################
 
 
+# Function to convert IP address and subnet mask to network range
+convert_to_network_range() {
+  local ip_address="$1"
+  local subnet_mask="$2"
 
+  # Convert IP address to binary
+  IFS='.' read -r -a ip_parts <<< "$ip_address"
+  ip_binary=""
+  for part in "${ip_parts[@]}"; do
+    ip_binary+="$(printf "%08d" "$(bc <<< "obase=2;$part")")"
+  done
+
+  # Convert subnet mask to binary
+  IFS='.' read -r -a mask_parts <<< "$subnet_mask"
+  mask_binary=""
+  for part in "${mask_parts[@]}"; do
+    mask_binary+="$(printf "%08d" "$(bc <<< "obase=2;$part")")"
+  done
+
+  # Calculate network address
+  network_binary=""
+  for ((i=0; i<${#ip_binary}; i++)); do
+    if [ "${ip_binary:$i:1}" == "1" ] && [ "${mask_binary:$i:1}" == "1" ]; then
+      network_binary+="1"
+    else
+      network_binary+="0"
+    fi
+  done
+
+  # Convert network address binary to decimal
+  network_parts=()
+  for ((i=0; i<${#network_binary}; i+=8)); do
+    network_parts+=("$((2#${network_binary:$i:8}))")
+  done
+
+  network_address="${network_parts[0]}.${network_parts[1]}.${network_parts[2]}.${network_parts[3]}"
+
+  echo "$network_address"
+}
 
 
 # Step 1: Install 'dialog' if needed
@@ -234,12 +272,15 @@ ansible-playbook 7create_br0_file.yml -e "with_internet_devices=$with_internet_d
 #Step 5 allow tranffic forwarder 
 ansible-playbook 8allow_traffic_forward.yml -i inventory.ini --limit "$device_local_ip_address"
 
+#Step 6 convert zerotier ip and subnet into range
+zt_network_range=$(convert_to_network_range "$zerotier_ip" "$zerotier_subnet_mask")
 
-#Step 6 create the firwall, pass zerotier ip 10.147.20.0 with last variable 0
+#Step 7 create the firwall, pass zerotier ip 10.147.20.0 with last variable 0
 read -p "Press endter to create the firewall .."
 ansible-playbook 8firewall_gateway_setup.yml -i inventory.ini \
-                         -e "zerotier_ip_range=$zerotier_ip"  \
+                         -e "zerotier_ip_range=$zt_network_range"  \
                          -e "without_internet_devices=$without_internet_devices_string" \
+                         -e "with_internet_devices=$with_internet_devices_string" \
                          -e "main_router_devices=$main_router_devices_string" \
                          --limit "$device_local_ip_address"
 
