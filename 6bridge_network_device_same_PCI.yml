@@ -5,15 +5,16 @@
   tasks:
     - name: Print the devices
       debug:
-        var: devices_with_internet
+        var: with_internet_devices
 
     - name: Print the devices
       debug:
-        var: devices_without_internet
+        var: without_internet_devices
 
     - name: Create OVS bridge
       command: "ovs-vsctl add-br br0"
 
-    - name: Add interfaces to bridge
+    - name: Add interfaces to bridge that are not empty
       command: "ovs-vsctl add-port br0 {{ item }}"
-      with_items: "{{ with_internet_devices + without_internet_devices }}"
+      with_items: "{{ with_internet_devices.split(',') + without_internet_devices.split(',') }}"
+      when: item|trim != ''

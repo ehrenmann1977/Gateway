@@ -25,6 +25,7 @@
 #         gui_network_questions device1 device2  192.168.188.1 10.147.20.2 255.255.255.0
 #         gui_network_questions
 #
+# ./gui_network_questions.sh         "enp1s0f0", "enp2s0", "enp1s0f1", "enp1s0f2", "enp1s0f3", "ztyqbvbk6k" 192.168.188.51 10.147.20.3 255.255.255.0
 ###########################################################
 
 
