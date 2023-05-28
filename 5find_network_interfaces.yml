@@ -26,6 +26,12 @@
          path: /tmp/find_interfaces.sh
          state: absent
 
-     - name: Return network_interfaces variable
-       return:
-         result: "{{ network_interfaces }}"
+     - name: Set network_interfaces fact
+       set_fact:
+         network_interfaces: "{{ network_interface_list.stdout_lines }}"
+
+     - name: Print network_interfaces
+       debug:
+         var: network_interfaces
+       register: network_interfaces_output
+

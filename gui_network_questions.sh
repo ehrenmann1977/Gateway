@@ -68,11 +68,12 @@ if [ $# -gt 3 ]; then
 else
   devices=("Device 1" "Device 2" "Device 3" "Device 4" "Device 5")
 fi
-7create_br0_file.yml
+
+
 # Exclude the ZeroTier device (starts with "zt")
 zt_device=""
 for device in "${devices[@]}"; do
-  if [[ "$device" == zt* ]]; then
+  if [[ "$device" == "zt"* ]]; then
     zt_device="$device"
     continue
   fi
@@ -81,14 +82,6 @@ done
 
 # Assign the filtered devices without zt to the devices array
 devices=("${filtered_devices[@]}")
-
-# Print the extracted IP address and device names
-echo "IP Address: $device_local_ip_address"
-echo "Device Names: ${devices[@]}"
-echo "ZeroTier Device: $zt_device"
-echo "ZeroTier IP Address: $zerotier_ip"
-echo "ZeroTier Subnet Mask: $zerotier_subnet_mask"
-
 
 # Step 3: Ask about each network interface if it is connected to internet or not or router main lan
 # If devices are provided as command line arguments, use them; otherwise, use the default devices array
@@ -182,6 +175,12 @@ for device in "${without_internet_devices[@]}"; do
     echo "$device"
 done
 
+# Print the extracted IP address and device names
+echo "IP Address: $device_local_ip_address"
+echo "Device Names: ${devices[@]}"
+echo "ZeroTier Device: $zt_device"
+echo "ZeroTier IP Address: $zerotier_ip"
+echo "ZeroTier Subnet Mask: $zerotier_subnet_mask"
 
 
 #Step 3 now create the bridge that includes all devices with internet and without internet

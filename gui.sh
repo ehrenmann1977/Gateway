@@ -41,6 +41,8 @@ dialog_cmd+=" --no-cancel"
 # Execute the dialog command and capture the user's input for the form
 input=$(eval $dialog_cmd 2>&1 >/dev/tty)
 
+clear
+
 # Parse the user's input for the form
 device_local_ip=$(echo "$input" | sed -n '1p')
 local_subnet_mask=$(echo "$input" | sed -n '2p')
@@ -84,12 +86,13 @@ ansible-playbook 4vswitch_install.yml -i inventory.ini  --limit $device_local_ip
 
 #detect network devices except local host
 echo "detecting network devices"
-ansible_output=$(ansible-playbook 5find_network_interfaces.yml -i inventory.ini  --limit $device_local_ip)
+ansible_output=$(ansible-playbook 5find_network_interfaces.yml -i inventory.ini  --limit $device_local_ip | tee /dev/tty)
+
 
 # Check if the Ansible script executed successfully
 if [ $? -eq 0 ]; then
     # Extract the network_interfaces variable using grep or any other text processing tool
-    network_interfaces=$(echo "$ansible_output" | grep -oP '(?<=network_interfaces": )\[.*?\]')
+    network_interfaces=$(echo "$ansible_output" | awk -F'"' '/"network_interfaces":/ {getline; while ($0 !~ /^ *]/) {print $0; getline}}')
 
     # Print the network interfaces
     echo "Network Interfaces:"
@@ -104,7 +107,8 @@ fi
 
 #Step 3 create the network questions qui
 # this will include also creating the bridge and firewall stuff
+echo "./gui_network_questions.sh $network_interfaces $device_local_ip $zerotier_device_ip $zerotier_device_ip_mask"
 
-gui_network_questions1.sh $network_interfaces $device_local_ip $zerotier_device_ip $zerotier_device_ip_mask
+./gui_network_questions.sh $network_interfaces $device_local_ip $zerotier_device_ip $zerotier_device_ip_mask
 
 

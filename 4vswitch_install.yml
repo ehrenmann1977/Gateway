@@ -32,7 +32,3 @@
       debug:
         var: ovs_show.stdout_lines
 
-    - name: Get the list of network interfaces on the same PCI
-      command: bash -c "lspci | grep Ethernet | awk '{print $1}' | xargs -I {} lspci -v -s {} | grep 'Kernel driver in use' | awk '{print $5}' | xargs -I {} ip link show {} | grep UP | awk '{print $2}' | sed 's/://'"
-      register: interfaces
-

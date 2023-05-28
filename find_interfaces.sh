@@ -67,7 +67,8 @@ if [[ "$1" == "-i" ]]; then
     find_pairs
   elif [[ "$2" == "3" ]]; then
     # Call the third script show all physical ethernet connections
-    ip a | awk '/^[0-9]+: (eth|en|eno|ens|enp)/ {print substr($2, 1, length($2)-1)}' | grep -vE '^lo$'
+    # here exclude in the if conditon, all bridges br, lo, ovs-*
+    ip a | awk '/^[0-9]+: [^:]+:/ {sub(/:/,"",$2); sub(/@.*$/,"",$2); if ($2 !~ /^ovs-|^br|^lo/) print $2}'
   else
     echo "Invalid argument for -i"
     exit 1
