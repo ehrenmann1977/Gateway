@@ -27,7 +27,16 @@ fi
 
 # Step 2: Create 'gui.sh' and make it executable
 
-#!/bin/bash
+# create the introduction
+dialog --title "Custom Encrypted Router"        --msgbox "This program has been developed by \nDr. Sherif Omran \n\n
+\n
+this program creates a customized router for \n
+encrypted network and assists in firewall \n
+setup of different ethernet interfaces. \n
+\n\n
+Copyright is owned to Dr. Omran Engineering \n\
+Westring 6, 88178 Germany. \n\nPress any key to continue !" 20 50
+
 
 # Create dialog command for the form
 dialog_cmd="dialog --form \"Network Settings:\" 0 0 0"
