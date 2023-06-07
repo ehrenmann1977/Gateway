@@ -35,6 +35,12 @@
       notify:
         - Reload systemd
 
+    - name: Enable and start network_up service
+      systemd:
+        name: gateway_settings.service
+        enabled: yes
+        state: started
+
     - name: Create network_up.sh script
       copy:
         content: |
