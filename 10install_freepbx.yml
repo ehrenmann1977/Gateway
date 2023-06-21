@@ -1,12 +1,23 @@
+---
 - name: Install FreePBX with Asterisk
   hosts: all
   become: yes
 
   tasks:
+    - name: Import MongoDB GPG key
+      apt_key:
+        url: https://www.mongodb.org/static/pgp/server-5.0.asc
+        state: present
+
+    - name: Add MongoDB repository
+      apt_repository:
+        repo: "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/debian {{ ansible_lsb.codename }}/mongodb-org/5.0 main"
+        state: present
+
     - name: Update OS
       apt:
-        update_cache: yes
-        upgrade: yes
+        update_cache: 'yes'
+        upgrade: 'yes'
 
     - name: Install necessary packages
       apt:
@@ -43,11 +54,11 @@
           - npm
           - pkg-config
           - libicu-dev
-		  - mongodb-org
-		  - mongodb-org-server
+          - mongodb-org
+          - mongodb-org-server
           - mongodb-org-shell
-		  - mongodb-org-mongos
-		  - mongodb-org-tools
+          - mongodb-org-mongos
+          - mongodb-org-tools
         state: present
         update_cache: yes
       register: packages_result
@@ -61,11 +72,11 @@
         mv * DIST
         cp DIST/asterisk.conf .
         sed -i 's/(!)//' asterisk.conf
-        touch modules.conf
-        touch cdr.conf
+      args:
+        creates: /etc/asterisk/modules.conf
+      changed_when: false
 
     - name: Configure Apache web server
-      become: yes
       lineinfile:
         path: /etc/php/7.4/apache2/php.ini
         regexp: "{{ item.regexp }}"
@@ -73,33 +84,22 @@
       with_items:
         - { regexp: "^(upload_max_filesize = ).*", line: "upload_max_filesize = 20M" }
         - { regexp: "^(memory_limit = ).*", line: "memory_limit = 256M" }
-      lineinfile:
-        path: /etc/apache2/apache2.conf
-        regexp: "{{ item.regexp }}"
-        line: "{{ item.line }}"
-      with_items:
-        - { regexp: "^(User|Group).*$", line: "User asterisk" }
-        - { regexp: "^AllowOverride None$", line: "AllowOverride All" }
-      service:
-        name: apache2
-        state: restarted
-      file:
-        path: /var/www/html/index.html
-        state: absent
+      notify:
+        - restart apache2
 
     - name: Configure ODBC
-      become: yes
       copy:
         dest: "{{ item.dest }}"
         content: "{{ item.content }}"
       with_items:
-        - { dest: "/etc/odbcinst.ini", content: |
+        - dest: "/etc/odbcinst.ini"
+          content: |
             [MySQL]
             Description = ODBC for MySQL (MariaDB)
             Driver = /usr/lib/x86_64-linux-gnu/odbc/libmaodbc.so
             FileUsage = 1
-          }
-        - { dest: "/etc/odbc.ini", content: |
+        - dest: "/etc/odbc.ini"
+          content: |
             [MySQL-asteriskcdrdb]
             Description = MySQL connection to 'asteriskcdrdb' database
             Driver = MySQL
@@ -108,7 +108,17 @@
             Port = 3306
             Socket = /var/run/mysqld/mysqld.sock
             Option = 3
-          }
+
+    - name: Remove any previous FreePBX installation
+      become: yes
+      file:
+        path: "{{ item }}"
+        state: absent
+      with_items:
+        - /usr/local/src/freepbx
+        - /var/www/html/admin/modules/xmpp/node/node_modules/freepbx
+
+
 
     - name: Download FreePBX package
       get_url:
@@ -120,8 +130,7 @@
       unarchive:
         src: /usr/local/src/freepbx-16.0-latest.tgz
         dest: /usr/local/src/
-        remote_src: true
-        copy: no
+        copy: false
 
     - name: Start Asterisk
       command: /usr/local/src/freepbx/start_asterisk start
@@ -130,17 +139,27 @@
       command: /usr/local/src/freepbx/install -n
       args:
         chdir: /usr/local/src/freepbx/
+      register: freepbx_install_result
 
-	- name: Install MongoDB from vendor's repo to enable xmpp module 
-	  apt:
-		name: mongodb-org
-		state: present
-		enablerepo: mongodb-org-{{mongodb_version.major}}
-		vars:
-		  mongodb_version:
-			major: 4.4
-			minor: 0
-			patch: 0
+    - name: Check if FreePBX installation was successful
+      set_fact:
+        freepbx_installed: "{{ freepbx_install_result.stdout_lines | regex_search('FreePBX successfully installed') }}"
+      when: freepbx_install_result is succeeded
+
+    - name: Print installation status
+      debug:
+        msg: "FreePBX installation status: {{ 'successful' if freepbx_installed else 'failed' }}"
+
+    - name: Add MongoDB repository
+      apt_repository:
+        repo: "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/debian {{ ansible_distribution_release }}/mongodb-org/5.0 main"
+        state: present
+        update_cache: yes
+
+    - name: Install MongoDB package
+      apt:
+        name: mongodb-org
+        state: present
 
     - name: Disable commercial repository
       command: fwconsole ma disablerepo commercial
@@ -150,43 +169,68 @@
 
     - name: Delete the firewall module
       command: fwconsole ma delete firewall
-	  
-	- name: Apply current FreePBX configuration
-	  command: fwconsole reload
 
-	- name: Set symlinks to correct sound files
-	  command: >
-		cd /usr/share/asterisk && 
-		mv sounds sounds-DIST && 
-		ln -s /var/lib/asterisk/sounds sounds
+    - name: Apply current FreePBX configuration
+      command: fwconsole reload
+    
+    - name: Create directory and rename existing directory
+      become: yes
+      file:
+        path: /usr/share/asterisk
+        state: directory
+        recurse: yes
+        backup: yes
+        force: yes
 
-	- name: Restart to load Asterisk modules
-	  command: fwconsole restart
+    - name: move default sound directory
+      become: yes
+      command:
+        cmd: |
+          mv /usr/share/asterisk/sounds /usr/share/asterisk/sounds-DIST
 
-	- name: Set up systemd
-	  blockinfile:
-		path: /etc/systemd/system/freepbx.service
-		block: |
-		  [Unit]
-		  Description=FreePBX VoIP Server
-		  After=mariadb.service
-		  [Service]
-		  Type=oneshot
-		  RemainAfterExit=yes
-		  ExecStart=/usr/sbin/fwconsole start -q
-		  ExecStop=/usr/sbin/fwconsole stop -q
-		  [Install]
-		  WantedBy=multi-user.target
-	  notify: restart freepbx
+    - name: Set symlink to correct sound files
+      become: yes
+      file:
+        src: /var/lib/asterisk/sounds
+        dest: /usr/share/asterisk/sounds
+        state: link
+        force: yes
 
-	- name: Enable FreePBX systemd service
-	  systemd:
-		name: freepbx
-		enabled: yes
-	  notify: restart freepbx
+    - name: Restart to load Asterisk modules
+      command: fwconsole restart
 
-	handlers:
-	- name: restart freepbx
-	  systemd:
-		name: freepbx
-		state: restarted
+    - name: Set up systemd
+      copy:
+        content: |
+          [Unit]
+          Description=FreePBX VoIP Server
+          After=mariadb.service
+
+          [Service]
+          Type=oneshot
+          RemainAfterExit=yes
+          ExecStart=/usr/sbin/fwconsole start -q
+          ExecStop=/usr/sbin/fwconsole stop -q
+
+          [Install]
+          WantedBy=multi-user.target
+        dest: /etc/systemd/system/freepbx.service 
+        mode: '0644'     
+
+    - name: Enable FreePBX systemd service
+      systemd:
+        name: freepbx
+        enabled: yes
+      notify: restart freepbx
+
+  handlers:
+    - name: restart apache2
+      service:
+        name: apache2
+        state: restarted
+
+    - name: restart freepbx
+      systemd:
+        name: freepbx
+        state: restarted
+
