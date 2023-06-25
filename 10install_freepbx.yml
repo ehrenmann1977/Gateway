@@ -4,28 +4,62 @@
   become: yes
 
   tasks:
-    - name: Import MongoDB GPG key
-      apt_key:
-        url: https://www.mongodb.org/static/pgp/server-5.0.asc
-        state: present
-
-    - name: Add MongoDB repository
-      apt_repository:
-        repo: "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/debian {{ ansible_lsb.codename }}/mongodb-org/5.0 main"
-        state: present
+ #   - name: Import MongoDB GPG key
+ #     apt_key:
+ #       url: https://www.mongodb.org/static/pgp/server-5.0.asc
+ #       state: present
+ #
+ #   - name: Add MongoDB repository
+ #     apt_repository:
+ #       repo: "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/debian {{ ansible_distribution_release }}/mongodb-org/5.0 main"
+ #       state: present
+ #       update_cache: yes
 
     - name: Update OS
       apt:
         update_cache: 'yes'
         upgrade: 'yes'
 
+    - name: Install MongoDB package
+      apt:
+        name: mongodb-org
+        state: present
+
+    - name: Remove any previous FreePBX installation
+      become: yes
+      file:
+        path: "{{ item }}"
+        state: absent
+      with_items:
+        - /usr/local/src/freepbx
+        - /var/www/html/admin/modules/xmpp/node/node_modules/freepbx
+
+    - name: Get Asterisk module status
+      shell: asterisk -x 'module show like app_core.so'
+      register: module_status
+      changed_when: false
+
+    - name: Check if core module is installed
+      debug:
+        msg: "Core module is installed"
+      when: "'app_core.so' not in module_status.stdout"
+
+    - name: Install Asterisk core module
+      command: fwconsole ma install core
+      when: "'app_core.so' not in module_status.stdout"
+
     - name: Install necessary packages
       apt:
         name:
-          - util-linux
+          - build-essential
+          - linux-headers-{{ ansible_kernel }}
+          - openssh-server
           - apache2
           - mariadb-server
           - mariadb-client
+          - bison
+          - flex
+          - python3-dev
           - php
           - php-curl
           - php-cli
@@ -38,87 +72,190 @@
           - php-bcmath
           - curl
           - sox
+          - libncurses5-dev
+          - libssl-dev
           - mpg123
-          - lame
-          - ffmpeg
+          - libxml2-dev
+          - libnewt-dev
           - sqlite3
+          - libsqlite3-dev
+          - pkg-config
+          - automake
+          - libtool
+          - autoconf
           - git
-          - unixodbc
+          - unixodbc-dev
+          - uuid
+          - uuid-dev
+          - libasound2-dev
+          - libogg-dev
+          - libvorbis-dev
+          - libicu-dev
+          - libcurl4-openssl-dev
+          - libical-dev
+          - libneon27-dev
+          - libsrtp2-dev
+          - libspandsp-dev
           - sudo
+          - subversion
+          - libtool-bin
+          - unixodbc
           - dirmngr
-          - postfix
+          - sendmail-bin
+          - sendmail
           - asterisk
+          - debhelper-compat
+          - cmake
+          - libmariadb-dev
           - odbc-mariadb
           - php-ldap
+          - util-linux
+          - lame
+          - ffmpeg
           - nodejs
           - npm
           - pkg-config
           - libicu-dev
-          - mongodb-org
-          - mongodb-org-server
-          - mongodb-org-shell
-          - mongodb-org-mongos
-          - mongodb-org-tools
+#          - mongodb-org
+#          - mongodb-org-server
+#          - mongodb-org-shell
+#          - mongodb-org-mongos
+#          - mongodb-org-tools
         state: present
         update_cache: yes
       register: packages_result
 
-    - name: Prepare Asterisk
-      shell: |
-        systemctl stop asterisk
-        systemctl disable asterisk
-        cd /etc/asterisk
-        mkdir DIST
-        mv * DIST
-        cp DIST/asterisk.conf .
-        sed -i 's/(!)//' asterisk.conf
+    - name: Install pear
+      apt:
+        name: php-pear
+        state: present
+
+    - name: Install Console_Getopt
+      shell: pear install Console_Getopt
+
+    - name: Stop and disable Asterisk service
+      systemd:
+        name: asterisk
+        state: stopped
+        enabled: no
+
+    - name: Create backup directory and move Asterisk files
+      command: mkdir -p /etc/asterisk/DIST && mv /etc/asterisk/* /etc/asterisk/DIST
       args:
-        creates: /etc/asterisk/modules.conf
+        creates: /etc/asterisk/DIST
+
+    - name: Copy asterisk.conf from backup
+      copy:
+        src: /etc/asterisk/DIST/asterisk.conf
+        dest: /etc/asterisk/asterisk.conf
+      args:
+        remote_src: no
+
+    - name: Remove exclamation marks from asterisk.conf
+      replace:
+        path: /etc/asterisk/asterisk.conf
+        regexp: '!'
+        replace: ''
+      args:
+        backup: no
+
+    - name: Create empty modules.conf file
+      copy:
+        content: ''
+        dest: /etc/asterisk/modules.conf
+      args:
+        force: yes
+
+    - name: Create empty cdr.conf file
+      copy:
+        content: ''
+        dest: /etc/asterisk/cdr.conf
+      args:
+        force: yes
+
+    - name: Adjust upload_max_filesize in php.ini
+      replace:
+        path: /etc/php/7.4/apache2/php.ini
+        regexp: '^upload_max_filesize = .*'
+        replace: 'upload_max_filesize = 20M'
+
+    - name: Adjust memory_limit in php.ini
+      replace:
+        path: /etc/php/7.4/apache2/php.ini
+        regexp: '^memory_limit = .*'
+        replace: 'memory_limit = 1256M'
+
+    - name: Adjust User and Group in apache2.conf
+      replace:
+        path: /etc/apache2/apache2.conf
+        regexp: '^(User|Group).*'
+        replace: '\1 asterisk'
+
+    - name: Adjust AllowOverride in apache2.conf
+      replace:
+        path: /etc/apache2/apache2.conf
+        regexp: '^AllowOverride None'
+        replace: 'AllowOverride All'
+
+    - name: Enable mod_rewrite
+      command: a2enmod rewrite
       changed_when: false
 
-    - name: Configure Apache web server
-      lineinfile:
-        path: /etc/php/7.4/apache2/php.ini
-        regexp: "{{ item.regexp }}"
-        line: "{{ item.line }}"
-      with_items:
-        - { regexp: "^(upload_max_filesize = ).*", line: "upload_max_filesize = 20M" }
-        - { regexp: "^(memory_limit = ).*", line: "memory_limit = 256M" }
-      notify:
-        - restart apache2
+    - name: Restart Apache service
+      service:
+        name: apache2
+        state: restarted
 
-    - name: Configure ODBC
-      copy:
-        dest: "{{ item.dest }}"
-        content: "{{ item.content }}"
-      with_items:
-        - dest: "/etc/odbcinst.ini"
-          content: |
-            [MySQL]
-            Description = ODBC for MySQL (MariaDB)
-            Driver = /usr/lib/x86_64-linux-gnu/odbc/libmaodbc.so
-            FileUsage = 1
-        - dest: "/etc/odbc.ini"
-          content: |
-            [MySQL-asteriskcdrdb]
-            Description = MySQL connection to 'asteriskcdrdb' database
-            Driver = MySQL
-            Server = localhost
-            Database = asteriskcdrdb
-            Port = 3306
-            Socket = /var/run/mysqld/mysqld.sock
-            Option = 3
-
-    - name: Remove any previous FreePBX installation
-      become: yes
+    - name: Remove index.html
       file:
-        path: "{{ item }}"
+        path: /var/www/html/index.html
         state: absent
-      with_items:
-        - /usr/local/src/freepbx
-        - /var/www/html/admin/modules/xmpp/node/node_modules/freepbx
 
+    - name: Create /etc/odbcinst.ini
+      copy:
+        dest: /etc/odbcinst.ini
+        content: |
+          [MySQL]
+          Description = ODBC for MySQL (MariaDB)
+          Driver = /usr/lib/x86_64-linux-gnu/odbc/libmaodbc.so
+          FileUsage = 1
 
+    - name: Create /etc/odbc.ini
+      copy:
+        dest: /etc/odbc.ini
+        content: |
+          [MySQL-asteriskcdrdb]
+          Description = MySQL connection to 'asteriskcdrdb' database
+          Driver = MySQL
+          Server = localhost
+          Database = asteriskcdrdb
+          Port = 3306
+          Socket = /var/run/mysqld/mysqld.sock
+          Option = 3
+
+    - name: Change to /usr/local/src directory
+      become: yes
+      shell: cd /usr/local/src
+
+    - name: Download ffmpeg release
+      become: yes
+      shell: wget "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz"
+
+    - name: Extract ffmpeg archive
+      become: yes
+      shell: tar xf ffmpeg-release-amd64-static.tar.xz
+
+    - name: Change to ffmpeg directory
+      become: yes
+      shell: cd ffmpeg-4*
+
+    - name: Move ffmpeg binary to /usr/local/bin
+      become: yes
+      shell: mv ffmpeg /usr/local/bin
+
+    - name: Change to /usr/local/src directory
+      become: yes
+      shell: cd /usr/local/src
 
     - name: Download FreePBX package
       get_url:
@@ -132,34 +269,16 @@
         dest: /usr/local/src/
         copy: false
 
+    - name: Change to FreePBX directory
+      become: yes
+      shell: cd /usr/local/src/freepbx/
+
     - name: Start Asterisk
       command: /usr/local/src/freepbx/start_asterisk start
 
     - name: Install FreePBX
-      command: /usr/local/src/freepbx/install -n
-      args:
-        chdir: /usr/local/src/freepbx/
-      register: freepbx_install_result
-
-    - name: Check if FreePBX installation was successful
-      set_fact:
-        freepbx_installed: "{{ freepbx_install_result.stdout_lines | regex_search('FreePBX successfully installed') }}"
-      when: freepbx_install_result is succeeded
-
-    - name: Print installation status
-      debug:
-        msg: "FreePBX installation status: {{ 'successful' if freepbx_installed else 'failed' }}"
-
-    - name: Add MongoDB repository
-      apt_repository:
-        repo: "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/debian {{ ansible_distribution_release }}/mongodb-org/5.0 main"
-        state: present
-        update_cache: yes
-
-    - name: Install MongoDB package
-      apt:
-        name: mongodb-org
-        state: present
+      become: yes
+      shell: ./install -n
 
     - name: Disable commercial repository
       command: fwconsole ma disablerepo commercial
@@ -172,15 +291,15 @@
 
     - name: Apply current FreePBX configuration
       command: fwconsole reload
+
+
     
     - name: Create directory and rename existing directory
       become: yes
       file:
         path: /usr/share/asterisk
         state: directory
-        recurse: yes
-        backup: yes
-        force: yes
+        mode: '0755'
 
     - name: move default sound directory
       become: yes
@@ -199,8 +318,10 @@
     - name: Restart to load Asterisk modules
       command: fwconsole restart
 
-    - name: Set up systemd
+    - name: Create freepbx service file
+      become: yes
       copy:
+        dest: /etc/systemd/system/freepbx.service
         content: |
           [Unit]
           Description=FreePBX VoIP Server
@@ -214,23 +335,15 @@
 
           [Install]
           WantedBy=multi-user.target
-        dest: /etc/systemd/system/freepbx.service 
-        mode: '0644'     
+
+    - name: Reload systemd daemon
+      become: yes
+      systemd:
+        daemon_reload: yes
 
     - name: Enable FreePBX systemd service
       systemd:
         name: freepbx
         enabled: yes
       notify: restart freepbx
-
-  handlers:
-    - name: restart apache2
-      service:
-        name: apache2
-        state: restarted
-
-    - name: restart freepbx
-      systemd:
-        name: freepbx
-        state: restarted
 

@@ -27,7 +27,7 @@
 
           [Service]
           Type=oneshot
-          ExecStart=/usr/bin/dhclient -v
+          ExecStart=/usr/sbin/dhclient -v
           RemainAfterExit=no
 
           [Install]

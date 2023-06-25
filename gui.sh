@@ -106,6 +106,9 @@ if [ $? -eq 0 ]; then
     # Print the network interfaces
     echo "Network Interfaces:"
     echo "$network_interfaces"
+    # remove linespaces and breaks 
+    network_interfaces=$(echo "$network_interfaces" | tr -d '[:space:]')
+
 else
     # Print the error message if the Ansible script failed
     echo "Error running the Ansible script."
