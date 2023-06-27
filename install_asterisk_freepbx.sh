@@ -75,8 +75,8 @@ mv ffmpeg /usr/local/bin
 # Finally we get to install FreePBX
 
 cd /usr/local/src
-wget http://mirror.freepbx.org/modules/packages/freepbx/freepbx-15.0-latest.tgz
-tar zxvf freepbx-15.0-latest.tgz 
+wget http://mirror.freepbx.org/modules/packages/freepbx/freepbx-16.0-latest.tgz
+tar zxvf freepbx-16.0-latest.tgz 
 cd /usr/local/src/freepbx/
 ./start_asterisk start
 ./install -n
