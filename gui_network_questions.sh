@@ -126,13 +126,15 @@ zerotier_ip="${@: -2:1}"
 # Get the ZeroTier subnet mask from the last argument
 zerotier_subnet_mask="${!#}"
 
+# Get the devices argument
+devices_argument="${@:1:$(($#-3))}"
+
 # Get the device names from the remaining arguments
-if [ $# -gt 3 ]; then
-  devices=("${@:1:$(($#-3))}")
+if [[ "$devices_argument" == *,* ]]; then
+  IFS=', ' read -r -a devices <<< "$devices_argument"
 else
   devices=("Device 1" "Device 2" "Device 3" "Device 4" "Device 5")
 fi
-
 
 # Exclude the ZeroTier device (starts with "zt")
 zt_device=""
@@ -146,6 +148,7 @@ done
 
 # Assign the filtered devices without zt to the devices array
 devices=("${filtered_devices[@]}")
+
 
 # Step 3: Ask about each network interface if it is connected to internet or not or router main lan
 # If devices are provided as command line arguments, use them; otherwise, use the default devices array
