@@ -129,25 +129,45 @@ zerotier_subnet_mask="${!#}"
 # Get the devices argument
 devices_argument="${@:1:$(($#-3))}"
 
+
 # Get the device names from the remaining arguments
 if [[ "$devices_argument" == *,* ]]; then
-  IFS=', ' read -r -a devices <<< "$devices_argument"
+  IFS=', ' read -ra devices <<< "$devices_argument"
 else
   devices=("Device 1" "Device 2" "Device 3" "Device 4" "Device 5")
 fi
-
 # Exclude the ZeroTier device (starts with "zt")
 zt_device=""
+filtered_devices=""
 for device in "${devices[@]}"; do
   if [[ "$device" == "zt"* ]]; then
     zt_device="$device"
-    continue
+  else
+    filtered_devices+=("$device")
   fi
-  filtered_devices+=("$device")
 done
+
 
 # Assign the filtered devices without zt to the devices array
 devices=("${filtered_devices[@]}")
+
+# remove line feed on hex side because \n did not work
+LF_filtered_devices=()
+for device in "${devices[@]}"; do
+  hex_code=$(xxd -pu <<< "$device")
+  if [[ "$hex_code" != "0a" ]]; then
+    LF_filtered_devices+=("$device")
+  fi
+done
+
+devices=("${LF_filtered_devices[@]}")
+
+#print the devices output
+#for device in "${devices[@]}"; do
+#  hex_code=$(xxd -pu <<< "$device")
+#  echo "Device: $device, Hex Code: $hex_code"
+#done
+
 
 
 # Step 3: Ask about each network interface if it is connected to internet or not or router main lan
