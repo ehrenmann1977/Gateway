@@ -81,7 +81,7 @@
       dest: /etc/network/interfaces.d/br0
       line: "  bridge_ports {{ item }}"
       state: present
-    with_items: "{{ without_internet_devices_string_var.split(',') + with_internet_devices_string_var.split(',') }}"
+    with_items: "{{ without_internet_devices_string_var.split(',') + with_internet_devices_string_var.split(',') | reject('empty') }}"
 
   handlers:
     - name: restart network

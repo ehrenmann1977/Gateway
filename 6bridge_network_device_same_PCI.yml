@@ -12,21 +12,33 @@
       debug:
         var: zerotier_subnet_mask
 
+    - name: Convert with_internet_devices to array
+      set_fact:
+        with_internet_devices_list: "{{ with_internet_devices.split(',') | map('trim') | map('regex_replace', '^\"|\"$', '') | list }}"
+
     - name: Print network interfaces allowed to access internet
       debug:
-        var: with_internet_devices
+        msg: "Device: {{ item }}"
+      loop: "{{ with_internet_devices_list }}"
+
+    - name: Define network interfaces not allowed to access internet
+      set_fact:
+        without_internet_devices_list: "{{ without_internet_devices.split(',') | map('trim') | map('regex_replace', '^\"|\"$', '') | list }}"
 
     - name: Print network interfaces not allowed to access internet
       debug:
-        var: without_internet_devices
+        msg: "Device: {{ item }}"
+      loop: "{{ without_internet_devices_list }}"
 
     - name: Create OVS bridge
       command: "ovs-vsctl add-br br0"
 
     - name: Add interfaces to bridge that are not empty
       command: "ovs-vsctl add-port br0 {{ item }}"
-      with_items: "{{ with_internet_devices.split(',') + without_internet_devices.split(',') }}"
-      when: item|trim != ''
+      with_items:
+        - "{{ with_internet_devices_list }}"
+        - "{{ without_internet_devices_list }}"
+      when: item | trim != ''
 
     - name: Add IP address to br0 bridge
       command: ifconfig br0 up {{ zerotier_ip }} netmask {{ zerotier_subnet_mask }}

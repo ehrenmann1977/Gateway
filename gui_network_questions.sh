@@ -140,7 +140,7 @@ fi
 zt_device=""
 filtered_devices=""
 for device in "${devices[@]}"; do
-  if [[ $device == "\"zt"* ]]; then
+  if [[ $device == \"zt* || $device == "zt"* ]]; then
     zt_device="$device"
   else
     filtered_devices+=("$device")
@@ -276,17 +276,17 @@ echo "ZeroTier Subnet Mask: $zerotier_subnet_mask"
 # except the local host that is already filtered and main router lan device
 
 # Convert the arrays to comma-separated strings
-with_internet_devices_string=$(IFS=,; echo "${with_internet_devices[*]}")
+with_internet_devices_string=$(IFS=,; printf "%s" "${with_internet_devices[*]}")
 with_internet_devices_string="${with_internet_devices_string//,,/,}"
 with_internet_devices_string="${with_internet_devices_string%,}"
 
-without_internet_devices_string=$(IFS=,; echo "${without_internet_devices[*]}")
+without_internet_devices_string=$(IFS=,; printf "%s" "${without_internet_devices[*]}")
 without_internet_devices_string="${without_internet_devices_string//,,/,}"
 without_internet_devices_string="${without_internet_devices_string%,}"
 
 #here are main router devices, although it is only 1 device for now, but i convert it
 #because i intend to bind multiple main devices later on
-main_router_devices_string=$(IFS=,; echo "${main_router_devices[*]}")
+main_router_devices_string=$(IFS=,; printf "%s" "${main_router_devices[*]}")
 main_router_devices_string="${main_router_devices_string//,,/,}"
 main_router_devices_string="${main_router_devices_string%,}"
 
