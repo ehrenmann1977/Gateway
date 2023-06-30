@@ -140,13 +140,12 @@ fi
 zt_device=""
 filtered_devices=""
 for device in "${devices[@]}"; do
-  if [[ "$device" == "zt"* ]]; then
+  if [[ $device == "\"zt"* ]]; then
     zt_device="$device"
   else
     filtered_devices+=("$device")
   fi
 done
-
 
 # Assign the filtered devices without zt to the devices array
 devices=("${filtered_devices[@]}")
@@ -163,10 +162,13 @@ done
 devices=("${LF_filtered_devices[@]}")
 
 #print the devices output
-#for device in "${devices[@]}"; do
-#  hex_code=$(xxd -pu <<< "$device")
-#  echo "Device: $device, Hex Code: $hex_code"
-#done
+for device in "${devices[@]}"; do
+  hex_code=$(xxd -pu <<< "$device")
+  echo "Device: $device, Hex Code: $hex_code"
+  if [[ $device == "\"zt"* ]]; then
+     echo "zt device"
+  fi
+done
 
 
 
