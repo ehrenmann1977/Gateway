@@ -149,3 +149,14 @@ systemctl enable freepbx
 
 # Asterisk and FreePBX 15 are installed! Go to the web interface at http://YOUR-IP to finish setup.
 
+fwconsole ma upgradeall
+
+#xmpp needs mongo database that must be installed first
+sudo apt-get install gnupg2 wget -y
+echo "deb [ arch=amd64,arm64 ] http://repo.mongodb.org/apt/debian bullseye/mongodb-org/7.0 main" | sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list
+apt update -y
+apt install mongodb-org -y
+mongsh
+
+fwconsole ma install xmpp
+
