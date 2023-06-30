@@ -10,8 +10,8 @@ apt-get upgrade
 
 # Install all prerequisite packages
 
-apt-get install -y build-essential linux-headers-`uname -r` openssh-server apache2 mariadb-server  mariadb-client bison flex php php-curl php-cli php-pdo php-mysql php-pear php-gd php-mbstring php-intl php-bcmath curl sox libncurses5-dev libssl-dev mpg123 libxml2-dev libnewt-dev sqlite3  libsqlite3-dev pkg-config automake libtool autoconf git unixodbc-dev uuid uuid-dev  libasound2-dev libogg-dev libvorbis-dev libicu-dev libcurl4-openssl-dev libical-dev libneon27-dev libsrtp2-dev libspandsp-dev sudo subversion libtool-bin python-dev unixodbc dirmngr sendmail-bin sendmail asterisk debhelper-compat cmake libmariadb-dev odbc-mariadb php-ldap npm
-apt install -y nodejs
+apt-get install -y build-essential linux-headers-`uname -r` openssh-server apache2 mariadb-server  mariadb-client bison flex php php-curl php-cli php-pdo php-mysql php-pear php-gd php-mbstring php-intl php-bcmath curl sox libncurses5-dev libssl-dev mpg123 libxml2-dev libnewt-dev sqlite3  libsqlite3-dev pkg-config automake libtool autoconf git unixodbc-dev uuid uuid-dev  libasound2-dev libogg-dev libvorbis-dev libicu-dev libcurl4-openssl-dev libical-dev libneon27-dev libsrtp2-dev libspandsp-dev sudo subversion libtool-bin python-dev unixodbc dirmngr sendmail-bin sendmail asterisk debhelper-compat cmake libmariadb-dev odbc-mariadb php-ldap 
+apt install -y nodejs npm
 
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
 source ~/.nvm/nvm.sh
@@ -21,18 +21,19 @@ export NVM_DIR="$HOME/.nvm"
 
 
 # install node js 14
-nvm install 14
+#nvm install 14
 #install pm2 onto nodejs
+
 apt update && apt install sudo curl && curl -sL https://raw.githubusercontent.com/Unitech/pm2/master/packager/setup.deb.sh | sudo -E bash -
 
+npm install -g pm2
+#npm install -g npm@latest
+#npm install -g npm-cache
 #npm install -g pm2
-npm install -g npm@latest
+#npm install -g npm@latest
 npm install -g npm-cache
 npm fund
 
-
-#curl -sL https://deb.nodesource.com/setup_14.x | sudo -E bash -
-#sudo apt-get install -y nodejs
 
 
 # Install this pear module
@@ -102,8 +103,8 @@ cd /usr/local/src/freepbx/
 # Get the rest of the modules
 fwconsole ma disablerepo commercial
 fwconsole ma installall
-fwconsole ma install voicemail
 fwconsole ma install pm2
+fwconsole ma install voicemail
 fwconsole ma install sipsettings
 fwconsole ma install api
 fwconsole ma delete firewall
