@@ -160,3 +160,4 @@ mongsh
 
 fwconsole ma install xmpp
 
+#change blacklist setting terminate call
